@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, ChevronLeft, CheckCircle2, Play, X } from 'lucide-react';
+import { Search, ChevronLeft, ChevronDown, CheckCircle2, Play, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -8,6 +8,13 @@ import { TopicBadge } from '@/components/TopicBadge';
 import { Byte, ALL_TOPICS, getTopicDisplayName } from '@/types/byte';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface PlaylistPanelProps {
   bytes: Byte[];
@@ -29,7 +36,7 @@ export function PlaylistPanel({
   getProgress,
 }: PlaylistPanelProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [selectedTopic, setSelectedTopic] = useState<string>('all');
 
   const filteredBytes = useMemo(() => {
     return bytes.filter(byte => {
@@ -40,26 +47,24 @@ export function PlaylistPanel({
           getTopicDisplayName(t).toLowerCase().includes(searchQuery.toLowerCase())
         );
       
-      const matchesTopics = 
-        selectedTopics.length === 0 ||
-        byte.byte_topics.some(t => selectedTopics.includes(t));
+      const matchesTopic = 
+        selectedTopic === 'all' ||
+        byte.byte_topics.includes(selectedTopic);
 
-      return matchesSearch && matchesTopics;
+      return matchesSearch && matchesTopic;
     });
-  }, [bytes, searchQuery, selectedTopics]);
-
-  const toggleTopic = (topic: string) => {
-    setSelectedTopics(prev =>
-      prev.includes(topic)
-        ? prev.filter(t => t !== topic)
-        : [...prev, topic]
-    );
-  };
+  }, [bytes, searchQuery, selectedTopic]);
 
   const clearFilters = () => {
     setSearchQuery('');
-    setSelectedTopics([]);
+    setSelectedTopic('all');
   };
+
+  const handleTopicChange = (value: string) => {
+    setSelectedTopic(value);
+  };
+
+  const hasActiveFilters = searchQuery || selectedTopic !== 'all';
 
   return (
     <AnimatePresence mode="wait">
@@ -96,34 +101,30 @@ export function PlaylistPanel({
               />
             </div>
 
-            {/* Topic Filters - Horizontally scrollable */}
-            <div className="mt-3 -mx-4 px-4 overflow-x-auto">
-              <div className="flex gap-1.5 pb-2 min-w-max px-4">
-                  {/* All chip */}
-                  <Button
-                    variant={selectedTopics.length === 0 ? "default" : "outline"}
-                    size="sm"
-                    onClick={clearFilters}
-                    className="rounded-full text-xs h-7 px-3 shrink-0"
-                  >
-                    All
-                  </Button>
-                  
-                  {/* Topic chips - ALL topics from our defined list */}
+            {/* Topic Dropdown Filter */}
+            <div className="mt-3">
+              <Select value={selectedTopic} onValueChange={handleTopicChange}>
+                <SelectTrigger className="w-full rounded-xl bg-muted/50 border-0 focus:ring-1 focus:ring-primary">
+                  <SelectValue>
+                    {selectedTopic === 'all' 
+                      ? 'Select Topic' 
+                      : `Topic: ${getTopicDisplayName(selectedTopic)}`}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="bg-background border border-border z-50 max-h-[300px]">
+                  <SelectItem value="all" className="cursor-pointer">
+                    All Topics
+                  </SelectItem>
                   {ALL_TOPICS.map(topic => (
-                    <TopicBadge
-                      key={topic}
-                      topic={topic}
-                      size="sm"
-                      onClick={() => toggleTopic(topic)}
-                      active={selectedTopics.includes(topic)}
-                      className="shrink-0"
-                    />
+                    <SelectItem key={topic} value={topic} className="cursor-pointer">
+                      {getTopicDisplayName(topic)}
+                    </SelectItem>
                   ))}
-                </div>
+                </SelectContent>
+              </Select>
             </div>
 
-            {(searchQuery || selectedTopics.length > 0) && (
+            {hasActiveFilters && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -189,11 +190,15 @@ export function PlaylistPanel({
                         </div>
                         
                         {/* Progress bar for watched videos */}
-                        {progress && progress.percentage > 0 && !isCompleted && (
+                        {isCompleted ? (
+                          <div className="mt-2">
+                            <Progress value={100} className="h-1" />
+                          </div>
+                        ) : progress && progress.percentage > 0 ? (
                           <div className="mt-2">
                             <Progress value={progress.percentage} className="h-1" />
                           </div>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   </motion.button>
