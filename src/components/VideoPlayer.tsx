@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -7,14 +7,12 @@ import {
   Minimize2, 
   CheckCircle2,
   SkipForward,
-  FileText,
-  Check
+  FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TopicBadge } from '@/components/TopicBadge';
 import { Progress } from '@/components/ui/progress';
 import { Byte } from '@/types/byte';
-import { useToast } from '@/hooks/use-toast';
 import confetti from 'canvas-confetti';
 import { NotesModal } from '@/components/NotesModal';
 
@@ -27,7 +25,6 @@ interface VideoPlayerProps {
   nextByte: Byte | null;
   onPrevious: () => void;
   onNext: () => void;
-  onMarkComplete: () => void;
   onProgressUpdate: (percentage: number) => void;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
@@ -49,17 +46,16 @@ export function VideoPlayer({
   nextByte,
   onPrevious,
   onNext,
-  onMarkComplete,
   onProgressUpdate,
   isFullscreen,
   onToggleFullscreen,
 }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
   const [iframeFocused, setIframeFocused] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [watchTime, setWatchTime] = useState(0);
   const progressIntervalRef = useRef<number | null>(null);
+  const hasTriggeredConfetti = useRef(false);
 
   // Track when iframe gets/loses focus
   useEffect(() => {
@@ -87,6 +83,7 @@ export function VideoPlayer({
   // Reset watch time when byte changes
   useEffect(() => {
     setWatchTime(0);
+    hasTriggeredConfetti.current = false;
     // Clear previous interval
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current);
@@ -109,7 +106,7 @@ export function VideoPlayer({
     progressIntervalRef.current = window.setInterval(() => {
       setWatchTime(prev => {
         const newTime = prev + 1;
-        const percentage = Math.min((newTime / ESTIMATED_VIDEO_DURATION) * 100, 95);
+        const percentage = Math.min((newTime / ESTIMATED_VIDEO_DURATION) * 100, 100);
         
         // Only update if progress increased
         if (percentage > currentProgress) {
@@ -126,6 +123,19 @@ export function VideoPlayer({
       }
     };
   }, [byte.byte_id, isCompleted, currentProgress, onProgressUpdate]);
+
+  // Fire confetti when auto-completed (progress reaches 95%+)
+  useEffect(() => {
+    if (isCompleted && !hasTriggeredConfetti.current) {
+      hasTriggeredConfetti.current = true;
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#14b8a6', '#8b5cf6', '#f59e0b', '#ec4899'],
+      });
+    }
+  }, [isCompleted]);
 
   // Extract file ID from Google Drive URL
   const getEmbedUrl = (url: string) => {
@@ -177,35 +187,6 @@ export function VideoPlayer({
     }
   }, [nextByte, onNext]);
 
-  const handleMarkComplete = useCallback(() => {
-    // Require at least 10 seconds of watch time OR 20% progress
-    const minWatchTime = 10;
-    const minProgress = 20;
-    
-    if (watchTime < minWatchTime && currentProgress < minProgress) {
-      toast({
-        title: "Watch more of the video",
-        description: "Please watch at least 10 seconds before marking complete.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    onMarkComplete();
-    
-    // Fire confetti!
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ['#14b8a6', '#8b5cf6', '#f59e0b', '#ec4899'],
-    });
-
-    toast({
-      title: "🎉 Byte Completed!",
-      description: "Great job! Keep learning!",
-    });
-  }, [watchTime, currentProgress, onMarkComplete, toast]);
 
   return (
     <>
@@ -341,26 +322,6 @@ export function VideoPlayer({
             <span className="hidden sm:inline">Previous</span>
           </Button>
 
-          {/* Mark Complete Button */}
-          {!isCompleted ? (
-            <Button
-              variant="default"
-              onClick={handleMarkComplete}
-              className="rounded-xl gap-2 gradient-primary text-primary-foreground"
-            >
-              <Check className="w-4 h-4" />
-              <span>Mark Complete</span>
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              disabled
-              className="rounded-xl gap-2 text-primary border-primary/30"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Completed</span>
-            </Button>
-          )}
 
           <Button
             variant="outline"

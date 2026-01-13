@@ -81,12 +81,6 @@ export default function Watch() {
     }
   }, [currentByte, updateProgress]);
 
-  // Handle mark complete
-  const handleMarkComplete = useCallback(() => {
-    if (currentByte) {
-      markCompleted(currentByte.byte_id);
-    }
-  }, [currentByte, markCompleted]);
 
   const handleToggleFullscreen = useCallback(() => {
     setIsFullscreen(prev => !prev);
@@ -174,7 +168,6 @@ export default function Watch() {
             nextByte={currentIndex < bytes.length - 1 ? bytes[currentIndex + 1] : null}
             onPrevious={handlePrevious}
             onNext={handleNext}
-            onMarkComplete={handleMarkComplete}
             onProgressUpdate={handleProgressUpdate}
             isFullscreen={isFullscreen}
             onToggleFullscreen={handleToggleFullscreen}
