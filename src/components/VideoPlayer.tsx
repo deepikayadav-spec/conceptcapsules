@@ -58,6 +58,32 @@ export function VideoPlayer({
   const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const [autoCompleteTriggered, setAutoCompleteTriggered] = useState(false);
+  const [iframeFocused, setIframeFocused] = useState(false);
+
+  // Track when iframe gets/loses focus
+  useEffect(() => {
+    const checkFocus = () => {
+      const isIframeFocused = document.activeElement instanceof HTMLIFrameElement;
+      setIframeFocused(isIframeFocused);
+    };
+
+    // Check focus on window focus/blur events
+    window.addEventListener('focus', checkFocus, true);
+    window.addEventListener('blur', checkFocus, true);
+    document.addEventListener('focusin', checkFocus);
+    document.addEventListener('focusout', checkFocus);
+    
+    // Also check periodically since iframe focus can be tricky to detect
+    const interval = setInterval(checkFocus, 500);
+
+    return () => {
+      window.removeEventListener('focus', checkFocus, true);
+      window.removeEventListener('blur', checkFocus, true);
+      document.removeEventListener('focusin', checkFocus);
+      document.removeEventListener('focusout', checkFocus);
+      clearInterval(interval);
+    };
+  }, []);
 
   // Extract file ID from Google Drive URL
   const getEmbedUrl = (url: string) => {
@@ -229,6 +255,10 @@ export function VideoPlayer({
             allow="autoplay; encrypted-media"
             allowFullScreen
             title={byte.byte_description}
+            onLoad={() => {
+              // Ensure document maintains focus for keyboard shortcuts
+              document.body.focus();
+            }}
           />
         </div>
         
@@ -296,10 +326,32 @@ export function VideoPlayer({
       </div>
 
       {/* Keyboard Shortcuts Hint */}
-      <div className="flex justify-center gap-4 mt-3 text-xs text-muted-foreground shrink-0">
-        <span><kbd className="px-1.5 py-0.5 bg-muted rounded">P</kbd> Previous</span>
-        <span><kbd className="px-1.5 py-0.5 bg-muted rounded">N</kbd> Next</span>
-        <span><kbd className="px-1.5 py-0.5 bg-muted rounded">F</kbd> Fullscreen</span>
+      <div className="flex justify-center items-center gap-4 mt-3 text-xs text-muted-foreground shrink-0">
+        <button 
+          onClick={onPrevious}
+          disabled={byteNumber === 1}
+          className="flex items-center gap-1 hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <kbd className="px-1.5 py-0.5 bg-muted rounded hover:bg-muted/80">P</kbd> Previous
+        </button>
+        <button 
+          onClick={onNext}
+          disabled={byteNumber === totalBytes}
+          className="flex items-center gap-1 hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <kbd className="px-1.5 py-0.5 bg-muted rounded hover:bg-muted/80">N</kbd> Next
+        </button>
+        <button 
+          onClick={handleToggleFullscreen}
+          className="flex items-center gap-1 hover:text-foreground transition-colors"
+        >
+          <kbd className="px-1.5 py-0.5 bg-muted rounded hover:bg-muted/80">F</kbd> Fullscreen
+        </button>
+        {iframeFocused && (
+          <span className="text-primary/70 animate-pulse ml-2">
+            Click outside video for shortcuts
+          </span>
+        )}
       </div>
     </motion.div>
   );
