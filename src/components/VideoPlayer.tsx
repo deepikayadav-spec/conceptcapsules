@@ -7,10 +7,12 @@ import {
   Minimize2, 
   CheckCircle2,
   SkipForward,
-  FileText
+  FileText,
+  Check
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TopicBadge } from '@/components/TopicBadge';
+import { Progress } from '@/components/ui/progress';
 import { Byte } from '@/types/byte';
 import { useToast } from '@/hooks/use-toast';
 import confetti from 'canvas-confetti';
@@ -21,10 +23,12 @@ interface VideoPlayerProps {
   byteNumber: number;
   totalBytes: number;
   isCompleted: boolean;
+  currentProgress: number;
   nextByte: Byte | null;
   onPrevious: () => void;
   onNext: () => void;
-  onAutoComplete: () => void;
+  onMarkComplete: () => void;
+  onProgressUpdate: (percentage: number) => void;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
 }
@@ -32,29 +36,30 @@ interface VideoPlayerProps {
 /**
  * Video Player Component
  * 
- * Security Note: 
- * We're using Google Drive preview URLs which don't expose the direct download link.
- * Right-click is disabled on the video container.
- * For full security, a backend proxy would be needed to stream videos without exposing URLs.
- * Complete prevention of downloads is not possible in a browser environment.
+ * Note: Google Drive iframes don't expose video events (timeupdate, ended).
+ * Progress is simulated based on time spent watching.
+ * Users can manually mark videos as complete when finished.
  */
 export function VideoPlayer({
   byte,
   byteNumber,
   totalBytes,
   isCompleted,
+  currentProgress,
   nextByte,
   onPrevious,
   onNext,
-  onAutoComplete,
+  onMarkComplete,
+  onProgressUpdate,
   isFullscreen,
   onToggleFullscreen,
 }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const [autoCompleteTriggered, setAutoCompleteTriggered] = useState(false);
   const [iframeFocused, setIframeFocused] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
+  const [watchTime, setWatchTime] = useState(0);
+  const progressIntervalRef = useRef<number | null>(null);
 
   // Track when iframe gets/loses focus
   useEffect(() => {
@@ -79,6 +84,49 @@ export function VideoPlayer({
     };
   }, []);
 
+  // Reset watch time when byte changes
+  useEffect(() => {
+    setWatchTime(0);
+    // Clear previous interval
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+    }
+  }, [byte.byte_id]);
+
+  // Simulate progress tracking (since we can't access iframe video events)
+  // Assume average video is ~60 seconds for progress calculation
+  const ESTIMATED_VIDEO_DURATION = 60; // seconds
+
+  useEffect(() => {
+    if (isCompleted) {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+      return;
+    }
+
+    // Update progress every second when watching
+    progressIntervalRef.current = window.setInterval(() => {
+      setWatchTime(prev => {
+        const newTime = prev + 1;
+        const percentage = Math.min((newTime / ESTIMATED_VIDEO_DURATION) * 100, 95);
+        
+        // Only update if progress increased
+        if (percentage > currentProgress) {
+          onProgressUpdate(percentage);
+        }
+        
+        return newTime;
+      });
+    }, 1000);
+
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+    };
+  }, [byte.byte_id, isCompleted, currentProgress, onProgressUpdate]);
+
   // Extract file ID from Google Drive URL
   const getEmbedUrl = (url: string) => {
     const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
@@ -87,14 +135,6 @@ export function VideoPlayer({
     }
     return url;
   };
-
-  // Reset auto-complete trigger when byte changes
-  useEffect(() => {
-    setAutoCompleteTriggered(false);
-  }, [byte.byte_id]);
-
-  // Note: Auto-completion is now handled in Watch.tsx via video ended simulation
-  // Since we can't access iframe video events, completion is triggered manually
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -137,6 +177,36 @@ export function VideoPlayer({
     }
   }, [nextByte, onNext]);
 
+  const handleMarkComplete = useCallback(() => {
+    // Require at least 10 seconds of watch time OR 20% progress
+    const minWatchTime = 10;
+    const minProgress = 20;
+    
+    if (watchTime < minWatchTime && currentProgress < minProgress) {
+      toast({
+        title: "Watch more of the video",
+        description: "Please watch at least 10 seconds before marking complete.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    onMarkComplete();
+    
+    // Fire confetti!
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ['#14b8a6', '#8b5cf6', '#f59e0b', '#ec4899'],
+    });
+
+    toast({
+      title: "🎉 Byte Completed!",
+      description: "Great job! Keep learning!",
+    });
+  }, [watchTime, currentProgress, onMarkComplete, toast]);
+
   return (
     <>
       <motion.div
@@ -175,7 +245,7 @@ export function VideoPlayer({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setNotesOpen(true)}
+              onClick={() => setNotesOpen(!notesOpen)}
               className="rounded-xl gap-2"
             >
               <FileText className="w-4 h-4" />
@@ -222,6 +292,13 @@ export function VideoPlayer({
                 document.body.focus();
               }}
             />
+
+            {/* Progress Overlay - Bottom of video */}
+            {!isCompleted && currentProgress > 0 && (
+              <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/70 to-transparent">
+                <Progress value={currentProgress} className="h-1" />
+              </div>
+            )}
           </div>
           
           {/* Up Next Card - Bottom right corner */}
@@ -253,7 +330,7 @@ export function VideoPlayer({
         </div>
 
         {/* Controls */}
-        <div className="flex items-center justify-center mt-4 gap-4 shrink-0">
+        <div className="flex items-center justify-center mt-4 gap-3 shrink-0 flex-wrap">
           <Button
             variant="outline"
             onClick={onPrevious}
@@ -263,6 +340,27 @@ export function VideoPlayer({
             <ChevronLeft className="w-4 h-4" />
             <span className="hidden sm:inline">Previous</span>
           </Button>
+
+          {/* Mark Complete Button */}
+          {!isCompleted ? (
+            <Button
+              variant="default"
+              onClick={handleMarkComplete}
+              className="rounded-xl gap-2 gradient-primary text-primary-foreground"
+            >
+              <Check className="w-4 h-4" />
+              <span>Mark Complete</span>
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              disabled
+              className="rounded-xl gap-2 text-primary border-primary/30"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span>Completed</span>
+            </Button>
+          )}
 
           <Button
             variant="outline"
@@ -305,13 +403,10 @@ export function VideoPlayer({
         </div>
       </motion.div>
 
-      {/* Notes Modal */}
+      {/* Notes Panel */}
       <NotesModal
         isOpen={notesOpen}
         onClose={() => setNotesOpen(false)}
-        byteId={byte.byte_id}
-        byteName={byte.byte_description}
-        byteTopic={byte.byte_topics[0] || 'PYTHON_GENERAL'}
       />
     </>
   );

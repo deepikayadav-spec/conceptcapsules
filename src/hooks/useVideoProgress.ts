@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 
-const PROGRESS_STORAGE_KEY = 'concept-capsule-progress-v2';
+const PROGRESS_STORAGE_KEY = 'concept-capsule-progress-v3';
 
 interface VideoProgressData {
   watchedSeconds: number;
@@ -38,26 +38,28 @@ export function useVideoProgress() {
     }
   }, []);
 
-  const updateProgress = useCallback((byteId: string, watchedSeconds: number, duration: number) => {
-    if (duration <= 0 || !byteId) return;
+  // Update progress for a video (percentage-based)
+  const updateProgress = useCallback((byteId: string, percentage: number) => {
+    if (!byteId || percentage < 0) return;
     
-    const percentage = Math.min((watchedSeconds / duration) * 100, 100);
+    const clampedPercentage = Math.min(percentage, 100);
     
     setProgress(prev => {
-      // Don't decrease progress (no rewinding effects)
       const existing = prev[byteId];
-      if (existing && existing.percentage > percentage && !existing.isCompleted) {
+      
+      // Don't decrease progress (no rewinding effects)
+      if (existing && existing.percentage > clampedPercentage && !existing.isCompleted) {
         return prev;
       }
 
       const newProgress = {
         ...prev,
         [byteId]: {
-          watchedSeconds,
-          duration,
-          percentage,
+          watchedSeconds: 0,
+          duration: 0,
+          percentage: clampedPercentage,
           lastWatched: Date.now(),
-          isCompleted: existing?.isCompleted || false,
+          isCompleted: existing?.isCompleted || clampedPercentage >= 95,
         },
       };
       
@@ -66,6 +68,7 @@ export function useVideoProgress() {
     });
   }, [saveProgress]);
 
+  // Mark video as completed
   const markCompleted = useCallback((byteId: string) => {
     if (!byteId) return;
 
@@ -93,20 +96,24 @@ export function useVideoProgress() {
     });
   }, [saveProgress]);
 
+  // Get progress for a specific video
   const getProgress = useCallback((byteId: string): VideoProgressData | null => {
     return progress[byteId] || null;
   }, [progress]);
 
+  // Check if video is completed
   const isCompleted = useCallback((byteId: string): boolean => {
     return progress[byteId]?.isCompleted || false;
   }, [progress]);
 
+  // Get list of completed video IDs
   const getCompletedVideos = useCallback((): string[] => {
     return Object.entries(progress)
       .filter(([_, data]) => data.isCompleted)
       .map(([byteId]) => byteId);
   }, [progress]);
 
+  // Get count of completed videos
   const getCompletedCount = useCallback((): number => {
     return Object.values(progress).filter(data => data.isCompleted).length;
   }, [progress]);

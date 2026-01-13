@@ -9,14 +9,12 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useVideoProgress } from '@/hooks/useVideoProgress';
 import { WatchState, STORAGE_KEY, Byte } from '@/types/byte';
 import { Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import confetti from 'canvas-confetti';
 
 const defaultState: WatchState = {
   lastVideoId: null,
   completedVideos: [],
   leftPanelOpen: true,
-  rightPanelOpen: false, // No longer used but kept for compatibility
+  rightPanelOpen: false,
 };
 
 export default function Watch() {
@@ -24,11 +22,11 @@ export default function Watch() {
   const [state, setState] = useLocalStorage<WatchState>(STORAGE_KEY, defaultState);
   const [currentByte, setCurrentByte] = useState<Byte | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const { toast } = useToast();
   
   // Progress tracking
   const { 
     getProgress, 
+    updateProgress,
     markCompleted,
     getCompletedVideos,
     getCompletedCount,
@@ -76,32 +74,19 @@ export default function Watch() {
     }
   }, [bytes, currentIndex]);
 
-  // Auto-complete handler - triggered when video ends or reaches 95%
-  const handleAutoComplete = useCallback(() => {
-    if (currentByte && !completedVideos.includes(currentByte.byte_id)) {
-      markCompleted(currentByte.byte_id);
-      
-      // Fire confetti!
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#14b8a6', '#8b5cf6', '#f59e0b', '#ec4899'],
-      });
-
-      toast({
-        title: "🎉 Byte Completed!",
-        description: "Great job! Moving to the next concept...",
-      });
-      
-      // Auto-advance to next video after a short delay
-      setTimeout(() => {
-        if (currentIndex < bytes.length - 1) {
-          setCurrentByte(bytes[currentIndex + 1]);
-        }
-      }, 1500);
+  // Handle progress update from video player
+  const handleProgressUpdate = useCallback((percentage: number) => {
+    if (currentByte) {
+      updateProgress(currentByte.byte_id, percentage);
     }
-  }, [currentByte, completedVideos, markCompleted, currentIndex, bytes, toast]);
+  }, [currentByte, updateProgress]);
+
+  // Handle mark complete
+  const handleMarkComplete = useCallback(() => {
+    if (currentByte) {
+      markCompleted(currentByte.byte_id);
+    }
+  }, [currentByte, markCompleted]);
 
   const handleToggleFullscreen = useCallback(() => {
     setIsFullscreen(prev => !prev);
@@ -111,14 +96,17 @@ export default function Watch() {
     setState(prev => ({ ...prev, leftPanelOpen: !prev.leftPanelOpen }));
   }, [setState]);
 
-  // Keyboard shortcuts - always active
+  // Keyboard shortcuts
   useKeyboardShortcuts({
     onNext: handleNext,
     onPrevious: handlePrevious,
     onFullscreen: handleToggleFullscreen,
     onToggleLeftPanel: handleToggleLeftPanel,
-    onToggleNotesPanel: () => {}, // Notes is now a modal, not a panel
+    onToggleNotesPanel: () => {},
   });
+
+  // Get current video progress
+  const currentProgress = currentByte ? (getProgress(currentByte.byte_id)?.percentage || 0) : 0;
 
   if (loading) {
     return (
@@ -182,10 +170,12 @@ export default function Watch() {
             byteNumber={currentIndex + 1}
             totalBytes={bytes.length}
             isCompleted={completedVideos.includes(currentByte.byte_id)}
+            currentProgress={currentProgress}
             nextByte={currentIndex < bytes.length - 1 ? bytes[currentIndex + 1] : null}
             onPrevious={handlePrevious}
             onNext={handleNext}
-            onAutoComplete={handleAutoComplete}
+            onMarkComplete={handleMarkComplete}
+            onProgressUpdate={handleProgressUpdate}
             isFullscreen={isFullscreen}
             onToggleFullscreen={handleToggleFullscreen}
           />
