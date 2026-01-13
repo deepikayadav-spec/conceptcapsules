@@ -1,21 +1,22 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Header } from '@/components/Header';
 import { PlaylistPanel } from '@/components/PlaylistPanel';
 import { VideoPlayer } from '@/components/VideoPlayer';
-import { NotesPanel } from '@/components/NotesPanel';
 import { useBytes } from '@/hooks/useBytes';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useVideoProgress } from '@/hooks/useVideoProgress';
 import { WatchState, STORAGE_KEY, Byte } from '@/types/byte';
 import { Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import confetti from 'canvas-confetti';
 
 const defaultState: WatchState = {
   lastVideoId: null,
   completedVideos: [],
   leftPanelOpen: true,
-  rightPanelOpen: true,
+  rightPanelOpen: false, // No longer used but kept for compatibility
 };
 
 export default function Watch() {
@@ -23,15 +24,18 @@ export default function Watch() {
   const [state, setState] = useLocalStorage<WatchState>(STORAGE_KEY, defaultState);
   const [currentByte, setCurrentByte] = useState<Byte | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const { toast } = useToast();
   
-  // Progress tracking for current byte
+  // Progress tracking
   const { 
-    updateProgress, 
     getProgress, 
-    hasWatchedEnough, 
-    shouldAutoComplete,
-    currentProgress 
-  } = useVideoProgress(currentByte?.byte_id || '');
+    markCompleted,
+    getCompletedVideos,
+    getCompletedCount,
+  } = useVideoProgress();
+
+  const completedVideos = getCompletedVideos();
+  const completedCount = getCompletedCount();
 
   // Initialize current byte
   useEffect(() => {
@@ -72,26 +76,23 @@ export default function Watch() {
     }
   }, [bytes, currentIndex]);
 
-  const handleMarkCompleted = useCallback(() => {
-    if (currentByte) {
-      setState(prev => {
-        const isCompleted = prev.completedVideos.includes(currentByte.byte_id);
-        return {
-          ...prev,
-          completedVideos: isCompleted
-            ? prev.completedVideos.filter(id => id !== currentByte.byte_id)
-            : [...prev.completedVideos, currentByte.byte_id],
-        };
-      });
-    }
-  }, [currentByte, setState]);
-
+  // Auto-complete handler - triggered when video ends or reaches 95%
   const handleAutoComplete = useCallback(() => {
-    if (currentByte && !state.completedVideos.includes(currentByte.byte_id)) {
-      setState(prev => ({
-        ...prev,
-        completedVideos: [...prev.completedVideos, currentByte.byte_id],
-      }));
+    if (currentByte && !completedVideos.includes(currentByte.byte_id)) {
+      markCompleted(currentByte.byte_id);
+      
+      // Fire confetti!
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#14b8a6', '#8b5cf6', '#f59e0b', '#ec4899'],
+      });
+
+      toast({
+        title: "🎉 Byte Completed!",
+        description: "Great job! Moving to the next concept...",
+      });
       
       // Auto-advance to next video after a short delay
       setTimeout(() => {
@@ -100,7 +101,7 @@ export default function Watch() {
         }
       }, 1500);
     }
-  }, [currentByte, state.completedVideos, setState, currentIndex, bytes]);
+  }, [currentByte, completedVideos, markCompleted, currentIndex, bytes, toast]);
 
   const handleToggleFullscreen = useCallback(() => {
     setIsFullscreen(prev => !prev);
@@ -110,17 +111,13 @@ export default function Watch() {
     setState(prev => ({ ...prev, leftPanelOpen: !prev.leftPanelOpen }));
   }, [setState]);
 
-  const handleToggleRightPanel = useCallback(() => {
-    setState(prev => ({ ...prev, rightPanelOpen: !prev.rightPanelOpen }));
-  }, [setState]);
-
   // Keyboard shortcuts - always active
   useKeyboardShortcuts({
     onNext: handleNext,
     onPrevious: handlePrevious,
     onFullscreen: handleToggleFullscreen,
     onToggleLeftPanel: handleToggleLeftPanel,
-    onToggleNotesPanel: handleToggleRightPanel,
+    onToggleNotesPanel: () => {}, // Notes is now a modal, not a panel
   });
 
   if (loading) {
@@ -155,7 +152,7 @@ export default function Watch() {
       {!isFullscreen && (
         <Header
           showProgress
-          completed={state.completedVideos.length}
+          completed={completedCount}
           total={bytes.length}
         />
       )}
@@ -167,7 +164,7 @@ export default function Watch() {
           <PlaylistPanel
             bytes={bytes}
             currentByteId={currentByte.byte_id}
-            completedVideos={state.completedVideos}
+            completedVideos={completedVideos}
             isOpen={state.leftPanelOpen}
             onToggle={handleToggleLeftPanel}
             onSelectByte={handleSelectByte}
@@ -184,28 +181,15 @@ export default function Watch() {
             byte={currentByte}
             byteNumber={currentIndex + 1}
             totalBytes={bytes.length}
-            isCompleted={state.completedVideos.includes(currentByte.byte_id)}
+            isCompleted={completedVideos.includes(currentByte.byte_id)}
             nextByte={currentIndex < bytes.length - 1 ? bytes[currentIndex + 1] : null}
             onPrevious={handlePrevious}
             onNext={handleNext}
-            onMarkCompleted={handleMarkCompleted}
+            onAutoComplete={handleAutoComplete}
             isFullscreen={isFullscreen}
             onToggleFullscreen={handleToggleFullscreen}
-            hasWatchedEnough={hasWatchedEnough}
-            onAutoComplete={handleAutoComplete}
-            shouldAutoComplete={shouldAutoComplete}
           />
         </motion.div>
-
-        {/* Right Panel - Notes (replaced AI) */}
-        {!isFullscreen && (
-          <NotesPanel
-            isOpen={state.rightPanelOpen}
-            onToggle={handleToggleRightPanel}
-            byteId={currentByte.byte_id}
-            byteName={currentByte.byte_description}
-          />
-        )}
       </div>
     </div>
   );
