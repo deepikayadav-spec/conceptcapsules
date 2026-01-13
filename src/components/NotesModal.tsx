@@ -1,285 +1,207 @@
-import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { FileText, Save, Download, X } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { motion, useDragControls } from 'framer-motion';
+import { FileText, Save, Download, X, Minus, GripHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { getTopicDisplayName, ALL_TOPICS } from '@/types/byte';
 
 interface NotesModalProps {
   isOpen: boolean;
   onClose: () => void;
-  byteId: string;
-  byteName: string;
-  byteTopic: string;
 }
 
-const NOTES_STORAGE_KEY = 'concept-capsule-notes-v2';
+const NOTES_STORAGE_KEY = 'conceptCapsuleNotes';
 
-// Storage structure: { [topic]: { [byteId]: { byteName: string, notes: string } } }
-interface NotesStorage {
-  [topic: string]: {
-    [byteId: string]: {
-      byteName: string;
-      notes: string;
-    };
-  };
-}
-
-export function NotesModal({ isOpen, onClose, byteId, byteName, byteTopic }: NotesModalProps) {
+export function NotesModal({ isOpen, onClose }: NotesModalProps) {
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const { toast } = useToast();
+  const dragControls = useDragControls();
+  const constraintsRef = useRef<HTMLDivElement>(null);
 
-  // Load notes for current byte
+  // Load notes on mount
   useEffect(() => {
-    if (!isOpen) return;
     try {
       const stored = localStorage.getItem(NOTES_STORAGE_KEY);
       if (stored) {
-        const allNotes: NotesStorage = JSON.parse(stored);
-        const topicNotes = allNotes[byteTopic];
-        if (topicNotes && topicNotes[byteId]) {
-          setNotes(topicNotes[byteId].notes || '');
-        } else {
-          setNotes('');
-        }
-      } else {
-        setNotes('');
+        setNotes(stored);
       }
     } catch (error) {
       console.error('Error loading notes:', error);
-      setNotes('');
     }
-  }, [byteId, byteTopic, isOpen]);
+  }, []);
 
-  // Save notes
+  // Save notes with debounce
   const saveNotes = useCallback((value: string) => {
     try {
-      const stored = localStorage.getItem(NOTES_STORAGE_KEY);
-      const allNotes: NotesStorage = stored ? JSON.parse(stored) : {};
-      
-      if (!allNotes[byteTopic]) {
-        allNotes[byteTopic] = {};
-      }
-      
-      allNotes[byteTopic][byteId] = {
-        byteName,
-        notes: value,
-      };
-      
-      localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(allNotes));
+      localStorage.setItem(NOTES_STORAGE_KEY, value);
     } catch (error) {
       console.error('Error saving notes:', error);
     }
-  }, [byteId, byteName, byteTopic]);
+  }, []);
 
   // Debounced auto-save
   useEffect(() => {
-    if (!isOpen) return;
     const timer = setTimeout(() => {
       if (notes !== undefined) {
         saveNotes(notes);
         setIsSaving(true);
         setTimeout(() => setIsSaving(false), 500);
       }
-    }, 500);
+    }, 400);
 
     return () => clearTimeout(timer);
-  }, [notes, saveNotes, isOpen]);
+  }, [notes, saveNotes]);
 
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setNotes(e.target.value);
   };
 
-  const downloadTopicNotes = (topic: string) => {
-    try {
-      const stored = localStorage.getItem(NOTES_STORAGE_KEY);
-      if (!stored) {
-        toast({
-          title: "No notes available",
-          description: "No notes available for this topic yet.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const allNotes: NotesStorage = JSON.parse(stored);
-      const topicNotes = allNotes[topic];
-
-      if (!topicNotes || Object.keys(topicNotes).length === 0) {
-        toast({
-          title: "No notes available",
-          description: `No notes available for ${getTopicDisplayName(topic)} yet.`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Check if there are any actual notes content
-      const hasContent = Object.values(topicNotes).some(n => n.notes && n.notes.trim());
-      if (!hasContent) {
-        toast({
-          title: "No notes available",
-          description: `No notes available for ${getTopicDisplayName(topic)} yet.`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Generate markdown content
-      let content = `# Topic: ${getTopicDisplayName(topic)}\n\n`;
-      content += `Generated from Concept Capsule\n`;
-      content += `Date: ${new Date().toLocaleDateString()}\n\n`;
-      content += `---\n\n`;
-
-      Object.entries(topicNotes).forEach(([id, data]) => {
-        if (data.notes && data.notes.trim()) {
-          content += `## ${data.byteName}\n\n`;
-          content += `${data.notes}\n\n`;
-          content += `---\n\n`;
-        }
-      });
-
-      // Create and download file
-      const blob = new Blob([content], { type: 'text/markdown' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `ConceptCapsule_Notes_${getTopicDisplayName(topic).replace(/\s+/g, '_')}.md`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
+  const downloadNotes = () => {
+    if (!notes || !notes.trim()) {
       toast({
-        title: "Notes downloaded!",
-        description: `${getTopicDisplayName(topic)} notes saved as markdown file.`,
-      });
-    } catch (error) {
-      console.error('Error downloading notes:', error);
-      toast({
-        title: "Download failed",
-        description: "Failed to download notes. Please try again.",
+        title: "No notes to download",
+        description: "No notes to download yet.",
         variant: "destructive",
       });
+      return;
     }
+
+    const today = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    const content = `# Concept Capsule Notes
+
+Date: ${today}
+
+---
+
+${notes}
+`;
+
+    const blob = new Blob([content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ConceptCapsule_Notes.md';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Notes downloaded!",
+      description: "Your notes have been saved as a markdown file.",
+    });
   };
 
-  const downloadCurrentTopicNotes = () => {
-    downloadTopicNotes(byteTopic);
-  };
-
-  // Get topics that have notes
-  const getTopicsWithNotes = (): string[] => {
-    try {
-      const stored = localStorage.getItem(NOTES_STORAGE_KEY);
-      if (!stored) return [];
-      const allNotes: NotesStorage = JSON.parse(stored);
-      return Object.keys(allNotes).filter(topic => {
-        const topicNotes = allNotes[topic];
-        return Object.values(topicNotes).some(n => n.notes && n.notes.trim());
-      });
-    } catch {
-      return [];
-    }
-  };
-
-  const topicsWithNotes = getTopicsWithNotes();
+  if (!isOpen) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px] max-h-[80vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl gradient-secondary flex items-center justify-center">
-              <FileText className="w-5 h-5 text-secondary-foreground" />
+    <div 
+      ref={constraintsRef}
+      className="fixed inset-0 pointer-events-none z-50"
+    >
+      <motion.div
+        drag
+        dragControls={dragControls}
+        dragMomentum={false}
+        dragConstraints={constraintsRef}
+        dragElastic={0}
+        initial={{ opacity: 0, scale: 0.95, x: 'calc(100vw - 420px)', y: 80 }}
+        animate={{ 
+          opacity: 1, 
+          scale: 1,
+        }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="absolute pointer-events-auto"
+        style={{ 
+          width: isMinimized ? '200px' : '360px',
+          right: '20px',
+          top: '80px',
+        }}
+      >
+        <div className="bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl overflow-hidden">
+          {/* Drag Handle Header */}
+          <div 
+            onPointerDown={(e) => dragControls.start(e)}
+            className="flex items-center justify-between px-4 py-3 bg-muted/50 cursor-grab active:cursor-grabbing border-b border-border/50"
+          >
+            <div className="flex items-center gap-2">
+              <GripHorizontal className="w-4 h-4 text-muted-foreground" />
+              <div className="w-8 h-8 rounded-lg gradient-secondary flex items-center justify-center">
+                <FileText className="w-4 h-4 text-secondary-foreground" />
+              </div>
+              <span className="font-semibold text-foreground">Notes</span>
             </div>
-            <div className="flex-1 min-w-0">
-              <span className="block">Notes</span>
-              <span className="text-xs font-normal text-muted-foreground truncate block max-w-[300px]">
-                {byteName}
-              </span>
-            </div>
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="flex-1 flex flex-col gap-4 min-h-0">
-          {/* Notes Textarea */}
-          <Textarea
-            value={notes}
-            onChange={handleNotesChange}
-            placeholder="Take notes while watching this video..."
-            className="flex-1 resize-none rounded-xl bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary text-sm min-h-[200px]"
-          />
-          
-          {/* Auto-save indicator */}
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            {isSaving ? (
-              <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex items-center gap-1"
-              >
-                <Save className="w-3 h-3" />
-                Saved
-              </motion.span>
-            ) : (
-              <span>Auto-saves as you type</span>
-            )}
-            
-            <span className="text-muted-foreground/70">
-              Topic: {getTopicDisplayName(byteTopic)}
-            </span>
-          </div>
-
-          {/* Download Section */}
-          <div className="pt-3 border-t border-border/50 space-y-3">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1">
               <Button
-                variant="outline"
-                size="sm"
-                onClick={downloadCurrentTopicNotes}
-                className="rounded-xl gap-2"
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsMinimized(!isMinimized)}
+                className="h-7 w-7 rounded-lg hover:bg-muted"
               >
-                <Download className="w-4 h-4" />
-                Download {getTopicDisplayName(byteTopic)} Notes
+                <Minus className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="h-7 w-7 rounded-lg hover:bg-muted"
+              >
+                <X className="w-4 h-4" />
               </Button>
             </div>
-
-            {topicsWithNotes.length > 1 && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Or download other topics:</span>
-                <Select onValueChange={downloadTopicNotes}>
-                  <SelectTrigger className="w-[180px] h-8 text-xs rounded-lg">
-                    <SelectValue placeholder="Select topic..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background border border-border z-50">
-                    {topicsWithNotes.map(topic => (
-                      <SelectItem key={topic} value={topic} className="text-xs">
-                        {getTopicDisplayName(topic)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
           </div>
+
+          {/* Content - Hidden when minimized */}
+          {!isMinimized && (
+            <div className="p-4 flex flex-col gap-3">
+              {/* Notes Textarea */}
+              <Textarea
+                value={notes}
+                onChange={handleNotesChange}
+                placeholder="Take notes while watching videos..."
+                className="resize-none rounded-xl bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-primary text-sm min-h-[200px] max-h-[300px]"
+              />
+              
+              {/* Footer */}
+              <div className="flex items-center justify-between">
+                {/* Auto-save indicator */}
+                <div className="text-xs text-muted-foreground">
+                  {isSaving ? (
+                    <motion.span
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="flex items-center gap-1"
+                    >
+                      <Save className="w-3 h-3" />
+                      Saved
+                    </motion.span>
+                  ) : (
+                    <span>Auto-saves as you type</span>
+                  )}
+                </div>
+                
+                {/* Download Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={downloadNotes}
+                  className="rounded-xl gap-2 h-8"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Download
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </motion.div>
+    </div>
   );
 }
