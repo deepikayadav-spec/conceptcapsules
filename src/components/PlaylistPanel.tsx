@@ -5,27 +5,28 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TopicBadge } from '@/components/TopicBadge';
-import { Byte } from '@/types/byte';
+import { Byte, ALL_TOPICS, getTopicDisplayName } from '@/types/byte';
+import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 
 interface PlaylistPanelProps {
   bytes: Byte[];
   currentByteId: string;
   completedVideos: string[];
-  allTopics: string[];
   isOpen: boolean;
   onToggle: () => void;
   onSelectByte: (byte: Byte) => void;
+  getProgress?: (byteId: string) => { percentage: number } | null;
 }
 
 export function PlaylistPanel({
   bytes,
   currentByteId,
   completedVideos,
-  allTopics,
   isOpen,
   onToggle,
   onSelectByte,
+  getProgress,
 }: PlaylistPanelProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
@@ -34,7 +35,10 @@ export function PlaylistPanel({
     return bytes.filter(byte => {
       const matchesSearch = 
         byte.byte_description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        byte.byte_topics.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
+        byte.byte_topics.some(t => 
+          t.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          getTopicDisplayName(t).toLowerCase().includes(searchQuery.toLowerCase())
+        );
       
       const matchesTopics = 
         selectedTopics.length === 0 ||
@@ -62,7 +66,7 @@ export function PlaylistPanel({
       {isOpen ? (
         <motion.div
           initial={{ width: 0, opacity: 0 }}
-          animate={{ width: 320, opacity: 1 }}
+          animate={{ width: 340, opacity: 1 }}
           exit={{ width: 0, opacity: 0 }}
           transition={{ duration: 0.3, ease: 'easeInOut' }}
           className="h-full glass border-r border-border/50 flex flex-col overflow-hidden"
@@ -92,17 +96,31 @@ export function PlaylistPanel({
               />
             </div>
 
-            {/* Topic Filters */}
-            <div className="flex flex-wrap gap-1.5 mt-3">
-              {allTopics.slice(0, 6).map(topic => (
-                <TopicBadge
-                  key={topic}
-                  topic={topic}
-                  size="sm"
-                  onClick={() => toggleTopic(topic)}
-                  active={selectedTopics.includes(topic)}
-                />
-              ))}
+            {/* Topic Filters - Horizontally scrollable */}
+            <div className="mt-3 -mx-4 px-4 overflow-x-auto">
+              <div className="flex gap-1.5 pb-2 min-w-max px-4">
+                  {/* All chip */}
+                  <Button
+                    variant={selectedTopics.length === 0 ? "default" : "outline"}
+                    size="sm"
+                    onClick={clearFilters}
+                    className="rounded-full text-xs h-7 px-3 shrink-0"
+                  >
+                    All
+                  </Button>
+                  
+                  {/* Topic chips - ALL topics from our defined list */}
+                  {ALL_TOPICS.map(topic => (
+                    <TopicBadge
+                      key={topic}
+                      topic={topic}
+                      size="sm"
+                      onClick={() => toggleTopic(topic)}
+                      active={selectedTopics.includes(topic)}
+                      className="shrink-0"
+                    />
+                  ))}
+                </div>
             </div>
 
             {(searchQuery || selectedTopics.length > 0) && (
@@ -125,6 +143,7 @@ export function PlaylistPanel({
                 const isActive = byte.byte_id === currentByteId;
                 const isCompleted = completedVideos.includes(byte.byte_id);
                 const originalIndex = bytes.findIndex(b => b.byte_id === byte.byte_id);
+                const progress = getProgress?.(byte.byte_id);
 
                 return (
                   <motion.button
@@ -168,6 +187,13 @@ export function PlaylistPanel({
                             <TopicBadge key={topic} topic={topic} size="sm" />
                           ))}
                         </div>
+                        
+                        {/* Progress bar for watched videos */}
+                        {progress && progress.percentage > 0 && !isCompleted && (
+                          <div className="mt-2">
+                            <Progress value={progress.percentage} className="h-1" />
+                          </div>
+                        )}
                       </div>
                     </div>
                   </motion.button>

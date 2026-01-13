@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ChevronLeft, 
@@ -6,12 +6,13 @@ import {
   Maximize2, 
   Minimize2, 
   CheckCircle2,
-  Play,
-  SkipForward
+  SkipForward,
+  Play
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TopicBadge } from '@/components/TopicBadge';
 import { Byte } from '@/types/byte';
+import { useToast } from '@/hooks/use-toast';
 import confetti from 'canvas-confetti';
 
 interface VideoPlayerProps {
@@ -25,6 +26,9 @@ interface VideoPlayerProps {
   onMarkCompleted: () => void;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
+  hasWatchedEnough: boolean;
+  onAutoComplete: () => void;
+  shouldAutoComplete: boolean;
 }
 
 /**
@@ -47,8 +51,13 @@ export function VideoPlayer({
   onMarkCompleted,
   isFullscreen,
   onToggleFullscreen,
+  hasWatchedEnough,
+  onAutoComplete,
+  shouldAutoComplete,
 }: VideoPlayerProps) {
-  const [showNextPreview, setShowNextPreview] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+  const [autoCompleteTriggered, setAutoCompleteTriggered] = useState(false);
 
   // Extract file ID from Google Drive URL
   const getEmbedUrl = (url: string) => {
@@ -60,39 +69,105 @@ export function VideoPlayer({
     return url;
   };
 
-  const handleMarkCompleted = useCallback(() => {
-    if (!isCompleted) {
-      // Fire confetti!
+  // Reset auto-complete trigger when byte changes
+  useEffect(() => {
+    setAutoCompleteTriggered(false);
+  }, [byte.byte_id]);
+
+  // Auto-complete when progress reaches 90%
+  useEffect(() => {
+    if (shouldAutoComplete && !isCompleted && !autoCompleteTriggered) {
+      setAutoCompleteTriggered(true);
+      onAutoComplete();
       confetti({
         particleCount: 100,
         spread: 70,
         origin: { y: 0.6 },
         colors: ['#14b8a6', '#8b5cf6', '#f59e0b', '#ec4899'],
       });
+      toast({
+        title: "🎉 Byte Completed!",
+        description: "Great job! Moving to the next concept...",
+      });
     }
+  }, [shouldAutoComplete, isCompleted, autoCompleteTriggered, onAutoComplete, toast]);
+
+  const handleMarkCompleted = useCallback(() => {
+    if (isCompleted) {
+      // Allow unmarking
+      onMarkCompleted();
+      return;
+    }
+
+    if (!hasWatchedEnough) {
+      toast({
+        title: "Watch some of the video first",
+        description: "Please watch at least 10 seconds or 20% of the video before marking it complete.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Fire confetti!
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ['#14b8a6', '#8b5cf6', '#f59e0b', '#ec4899'],
+    });
     onMarkCompleted();
-  }, [isCompleted, onMarkCompleted]);
+  }, [isCompleted, hasWatchedEnough, onMarkCompleted, toast]);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     return false;
   };
 
-  useEffect(() => {
-    if (nextByte) {
-      setShowNextPreview(true);
-      const timer = setTimeout(() => setShowNextPreview(false), 5000);
-      return () => clearTimeout(timer);
+  const handleToggleFullscreen = useCallback(() => {
+    if (!containerRef.current) {
+      onToggleFullscreen();
+      return;
     }
-  }, [byte.byte_id, nextByte]);
+
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen().catch(() => {
+        // Fallback to internal fullscreen state
+        onToggleFullscreen();
+      });
+    } else {
+      document.exitFullscreen().catch(() => {
+        onToggleFullscreen();
+      });
+    }
+  }, [onToggleFullscreen]);
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isNowFullscreen = !!document.fullscreenElement;
+      if (isNowFullscreen !== isFullscreen) {
+        onToggleFullscreen();
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, [isFullscreen, onToggleFullscreen]);
+
+  const handlePlayNext = useCallback(() => {
+    if (nextByte) {
+      onNext();
+    }
+  }, [nextByte, onNext]);
 
   return (
     <motion.div
+      ref={containerRef}
       layout
-      className={`flex flex-col ${isFullscreen ? 'fixed inset-0 z-50 bg-background p-6' : 'h-full'}`}
+      className={`flex flex-col h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-background p-6' : ''}`}
     >
       {/* Header */}
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-4 shrink-0">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -121,7 +196,7 @@ export function VideoPlayer({
         <Button
           variant="ghost"
           size="icon"
-          onClick={onToggleFullscreen}
+          onClick={handleToggleFullscreen}
           className="rounded-xl hover:bg-muted shrink-0 ml-4"
         >
           {isFullscreen ? (
@@ -132,46 +207,61 @@ export function VideoPlayer({
         </Button>
       </div>
 
-      {/* Video Container */}
+      {/* Video Container - Vertical/Shorts aspect ratio */}
       <div 
-        className="relative flex-1 min-h-0 rounded-2xl overflow-hidden bg-muted no-context-menu"
+        className="relative flex-1 min-h-0 flex items-center justify-center bg-muted/30 rounded-2xl overflow-hidden"
         onContextMenu={handleContextMenu}
       >
-        <iframe
-          src={getEmbedUrl(byte.byte_url)}
-          className="absolute inset-0 w-full h-full"
-          allow="autoplay; encrypted-media"
-          allowFullScreen
-          title={byte.byte_description}
-        />
+        {/* Video wrapper with proper vertical aspect ratio */}
+        <div 
+          className="relative bg-black rounded-xl overflow-hidden no-context-menu"
+          style={{
+            maxHeight: '70vh',
+            maxWidth: '420px',
+            width: '100%',
+            aspectRatio: '9/16',
+          }}
+        >
+          <iframe
+            src={getEmbedUrl(byte.byte_url)}
+            className="absolute inset-0 w-full h-full"
+            style={{ objectFit: 'contain' }}
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+            title={byte.byte_description}
+          />
+        </div>
         
-        {/* Next Up Preview */}
-        <AnimatePresence>
-          {showNextPreview && nextByte && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="absolute bottom-4 right-4 glass rounded-xl p-3 max-w-xs"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-10 h-10 rounded-lg gradient-secondary shrink-0">
-                  <SkipForward className="w-5 h-5 text-secondary-foreground" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground font-medium">Next up</p>
-                  <p className="text-sm font-semibold text-foreground truncate">
-                    {nextByte.byte_description}
-                  </p>
+        {/* Up Next Card - Bottom right corner */}
+        {nextByte && (
+          <motion.button
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            onClick={handlePlayNext}
+            className="absolute bottom-4 right-4 glass rounded-xl p-3 max-w-xs cursor-pointer hover:bg-muted/80 transition-colors group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg gradient-secondary shrink-0 group-hover:scale-105 transition-transform">
+                <SkipForward className="w-5 h-5 text-secondary-foreground" />
+              </div>
+              <div className="min-w-0 text-left">
+                <p className="text-xs text-muted-foreground font-medium">Up Next</p>
+                <p className="text-sm font-semibold text-foreground truncate max-w-[160px]">
+                  {nextByte.byte_description}
+                </p>
+                <div className="flex gap-1 mt-1">
+                  {nextByte.byte_topics.slice(0, 1).map(topic => (
+                    <TopicBadge key={topic} topic={topic} size="sm" />
+                  ))}
                 </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+          </motion.button>
+        )}
       </div>
 
       {/* Controls */}
-      <div className="flex items-center justify-between mt-4 gap-4">
+      <div className="flex items-center justify-between mt-4 gap-4 shrink-0">
         <Button
           variant="outline"
           onClick={onPrevious}
@@ -206,7 +296,7 @@ export function VideoPlayer({
       </div>
 
       {/* Keyboard Shortcuts Hint */}
-      <div className="flex justify-center gap-4 mt-3 text-xs text-muted-foreground">
+      <div className="flex justify-center gap-4 mt-3 text-xs text-muted-foreground shrink-0">
         <span><kbd className="px-1.5 py-0.5 bg-muted rounded">P</kbd> Previous</span>
         <span><kbd className="px-1.5 py-0.5 bg-muted rounded">N</kbd> Next</span>
         <span><kbd className="px-1.5 py-0.5 bg-muted rounded">F</kbd> Fullscreen</span>
