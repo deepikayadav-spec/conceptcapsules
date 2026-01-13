@@ -1,12 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Header } from '@/components/Header';
 import { PlaylistPanel } from '@/components/PlaylistPanel';
 import { VideoPlayer } from '@/components/VideoPlayer';
-import { AIChatPanel } from '@/components/AIChatPanel';
+import { NotesPanel } from '@/components/NotesPanel';
 import { useBytes } from '@/hooks/useBytes';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useVideoProgress } from '@/hooks/useVideoProgress';
 import { WatchState, STORAGE_KEY, Byte } from '@/types/byte';
 import { Loader2 } from 'lucide-react';
 
@@ -18,10 +19,19 @@ const defaultState: WatchState = {
 };
 
 export default function Watch() {
-  const { bytes, loading, error, getAllTopics } = useBytes();
+  const { bytes, loading, error } = useBytes();
   const [state, setState] = useLocalStorage<WatchState>(STORAGE_KEY, defaultState);
   const [currentByte, setCurrentByte] = useState<Byte | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  
+  // Progress tracking for current byte
+  const { 
+    updateProgress, 
+    getProgress, 
+    hasWatchedEnough, 
+    shouldAutoComplete,
+    currentProgress 
+  } = useVideoProgress(currentByte?.byte_id || '');
 
   // Initialize current byte
   useEffect(() => {
@@ -76,6 +86,22 @@ export default function Watch() {
     }
   }, [currentByte, setState]);
 
+  const handleAutoComplete = useCallback(() => {
+    if (currentByte && !state.completedVideos.includes(currentByte.byte_id)) {
+      setState(prev => ({
+        ...prev,
+        completedVideos: [...prev.completedVideos, currentByte.byte_id],
+      }));
+      
+      // Auto-advance to next video after a short delay
+      setTimeout(() => {
+        if (currentIndex < bytes.length - 1) {
+          setCurrentByte(bytes[currentIndex + 1]);
+        }
+      }, 1500);
+    }
+  }, [currentByte, state.completedVideos, setState, currentIndex, bytes]);
+
   const handleToggleFullscreen = useCallback(() => {
     setIsFullscreen(prev => !prev);
   }, []);
@@ -88,13 +114,13 @@ export default function Watch() {
     setState(prev => ({ ...prev, rightPanelOpen: !prev.rightPanelOpen }));
   }, [setState]);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts - always active
   useKeyboardShortcuts({
     onNext: handleNext,
     onPrevious: handlePrevious,
     onFullscreen: handleToggleFullscreen,
     onToggleLeftPanel: handleToggleLeftPanel,
-    onToggleAIPanel: handleToggleRightPanel,
+    onToggleNotesPanel: handleToggleRightPanel,
   });
 
   if (loading) {
@@ -142,10 +168,10 @@ export default function Watch() {
             bytes={bytes}
             currentByteId={currentByte.byte_id}
             completedVideos={state.completedVideos}
-            allTopics={getAllTopics()}
             isOpen={state.leftPanelOpen}
             onToggle={handleToggleLeftPanel}
             onSelectByte={handleSelectByte}
+            getProgress={getProgress}
           />
         )}
 
@@ -165,15 +191,19 @@ export default function Watch() {
             onMarkCompleted={handleMarkCompleted}
             isFullscreen={isFullscreen}
             onToggleFullscreen={handleToggleFullscreen}
+            hasWatchedEnough={hasWatchedEnough}
+            onAutoComplete={handleAutoComplete}
+            shouldAutoComplete={shouldAutoComplete}
           />
         </motion.div>
 
-        {/* Right Panel - AI Chat */}
+        {/* Right Panel - Notes (replaced AI) */}
         {!isFullscreen && (
-          <AIChatPanel
+          <NotesPanel
             isOpen={state.rightPanelOpen}
             onToggle={handleToggleRightPanel}
-            currentTopic={currentByte.byte_topics[0]}
+            byteId={currentByte.byte_id}
+            byteName={currentByte.byte_description}
           />
         )}
       </div>
