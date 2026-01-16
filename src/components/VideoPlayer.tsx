@@ -292,6 +292,11 @@ export function VideoPlayer({
               }}
             />
 
+            {/* Overlay to hide Google Drive's Pop-out button */}
+            <div 
+              className="absolute top-0 right-0 w-20 h-12 bg-black z-10 pointer-events-auto"
+              style={{ borderTopRightRadius: '12px' }}
+            />
           </div>
           
           {/* Up Next Card - Bottom right corner */}
