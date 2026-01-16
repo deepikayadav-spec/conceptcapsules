@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TopicBadge } from '@/components/TopicBadge';
 import { Byte, ALL_TOPICS, getTopicDisplayName } from '@/types/byte';
-import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import {
   Select,
@@ -188,17 +187,6 @@ export function PlaylistPanel({
                             <TopicBadge key={topic} topic={topic} size="sm" />
                           ))}
                         </div>
-                        
-                        {/* Progress bar for watched videos */}
-                        {isCompleted ? (
-                          <div className="mt-2">
-                            <Progress value={100} className="h-1" />
-                          </div>
-                        ) : progress && progress.percentage > 0 ? (
-                          <div className="mt-2">
-                            <Progress value={progress.percentage} className="h-1" />
-                          </div>
-                        ) : null}
                       </div>
                     </div>
                   </motion.button>

@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TopicBadge } from '@/components/TopicBadge';
-import { Progress } from '@/components/ui/progress';
 import { Byte } from '@/types/byte';
 import confetti from 'canvas-confetti';
 import { NotesModal } from '@/components/NotesModal';
@@ -274,12 +273,6 @@ export function VideoPlayer({
               }}
             />
 
-            {/* Progress Overlay - Bottom of video */}
-            {!isCompleted && currentProgress > 0 && (
-              <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/70 to-transparent">
-                <Progress value={currentProgress} className="h-1" />
-              </div>
-            )}
           </div>
           
           {/* Up Next Card - Bottom right corner */}
@@ -334,34 +327,6 @@ export function VideoPlayer({
           </Button>
         </div>
 
-        {/* Keyboard Shortcuts Hint */}
-        <div className="flex justify-center items-center gap-4 mt-3 text-xs text-muted-foreground shrink-0">
-          <button 
-            onClick={onPrevious}
-            disabled={byteNumber === 1}
-            className="flex items-center gap-1 hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <kbd className="px-1.5 py-0.5 bg-muted rounded hover:bg-muted/80">P</kbd> Previous
-          </button>
-          <button 
-            onClick={onNext}
-            disabled={byteNumber === totalBytes}
-            className="flex items-center gap-1 hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <kbd className="px-1.5 py-0.5 bg-muted rounded hover:bg-muted/80">N</kbd> Next
-          </button>
-          <button 
-            onClick={handleToggleFullscreen}
-            className="flex items-center gap-1 hover:text-foreground transition-colors"
-          >
-            <kbd className="px-1.5 py-0.5 bg-muted rounded hover:bg-muted/80">F</kbd> Fullscreen
-          </button>
-          {iframeFocused && (
-            <span className="text-primary/70 animate-pulse ml-2">
-              Click outside video for shortcuts
-            </span>
-          )}
-        </div>
       </motion.div>
 
       {/* Notes Panel */}

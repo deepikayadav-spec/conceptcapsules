@@ -1,35 +1,23 @@
 import { useEffect, useCallback, useRef } from 'react';
 
 interface KeyboardShortcuts {
-  onNext?: () => void;
-  onPrevious?: () => void;
-  onFullscreen?: () => void;
   onToggleLeftPanel?: () => void;
   onToggleNotesPanel?: () => void;
 }
 
 export function useKeyboardShortcuts({
-  onNext,
-  onPrevious,
-  onFullscreen,
   onToggleLeftPanel,
   onToggleNotesPanel,
 }: KeyboardShortcuts) {
   // Use refs to always have the latest callback references
-  const onNextRef = useRef(onNext);
-  const onPreviousRef = useRef(onPrevious);
-  const onFullscreenRef = useRef(onFullscreen);
   const onToggleLeftPanelRef = useRef(onToggleLeftPanel);
   const onToggleNotesPanelRef = useRef(onToggleNotesPanel);
 
   // Update refs when callbacks change
   useEffect(() => {
-    onNextRef.current = onNext;
-    onPreviousRef.current = onPrevious;
-    onFullscreenRef.current = onFullscreen;
     onToggleLeftPanelRef.current = onToggleLeftPanel;
     onToggleNotesPanelRef.current = onToggleNotesPanel;
-  }, [onNext, onPrevious, onFullscreen, onToggleLeftPanel, onToggleNotesPanel]);
+  }, [onToggleLeftPanel, onToggleNotesPanel]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -46,21 +34,6 @@ export function useKeyboardShortcuts({
       const key = event.key.toLowerCase();
 
       switch (key) {
-        case 'n':
-          event.preventDefault();
-          event.stopPropagation();
-          onNextRef.current?.();
-          break;
-        case 'p':
-          event.preventDefault();
-          event.stopPropagation();
-          onPreviousRef.current?.();
-          break;
-        case 'f':
-          event.preventDefault();
-          event.stopPropagation();
-          onFullscreenRef.current?.();
-          break;
         case 'l':
           event.preventDefault();
           event.stopPropagation();
