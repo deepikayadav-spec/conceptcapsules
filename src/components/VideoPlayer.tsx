@@ -26,6 +26,7 @@ interface VideoPlayerProps {
   onProgressUpdate: (percentage: number) => void;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
+  autoStart?: boolean; // Auto-start watching when selected from playlist
 }
 
 /**
@@ -47,46 +48,42 @@ export function VideoPlayer({
   onProgressUpdate,
   isFullscreen,
   onToggleFullscreen,
+  autoStart = false,
 }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [iframeFocused, setIframeFocused] = useState(false);
+  const [isWatching, setIsWatching] = useState(autoStart);
   const [notesOpen, setNotesOpen] = useState(false);
   const [watchTime, setWatchTime] = useState(0);
   const [loopCount, setLoopCount] = useState(0);
+  const [isTabVisible, setIsTabVisible] = useState(true);
   const progressIntervalRef = useRef<number | null>(null);
 
-  // Track when iframe gets/loses focus
+  // Track tab visibility to pause progress when tab is hidden
   useEffect(() => {
-    const checkFocus = () => {
-      const isIframeFocused = document.activeElement instanceof HTMLIFrameElement;
-      setIframeFocused(isIframeFocused);
+    const handleVisibility = () => {
+      setIsTabVisible(!document.hidden);
     };
-
-    window.addEventListener('focus', checkFocus, true);
-    window.addEventListener('blur', checkFocus, true);
-    document.addEventListener('focusin', checkFocus);
-    document.addEventListener('focusout', checkFocus);
-    
-    const interval = setInterval(checkFocus, 500);
-
-    return () => {
-      window.removeEventListener('focus', checkFocus, true);
-      window.removeEventListener('blur', checkFocus, true);
-      document.removeEventListener('focusin', checkFocus);
-      document.removeEventListener('focusout', checkFocus);
-      clearInterval(interval);
-    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
-  // Reset watch time and loop count when byte changes
+  // Handle click on video area to start watching
+  const handleVideoAreaClick = useCallback(() => {
+    if (!isWatching) {
+      setIsWatching(true);
+    }
+  }, [isWatching]);
+
+  // Reset watch time, loop count, and start watching when byte changes (if autoStart)
   useEffect(() => {
     setWatchTime(0);
     setLoopCount(0);
+    setIsWatching(autoStart); // Auto-start if selected from playlist
     // Clear previous interval
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current);
     }
-  }, [byte.byte_id]);
+  }, [byte.byte_id, autoStart]);
 
   // Simulate progress tracking (since we can't access iframe video events)
   // Assume average video is ~60 seconds for progress calculation
@@ -102,8 +99,8 @@ export function VideoPlayer({
       return;
     }
 
-    // ONLY track progress when iframe is focused (user clicked play)
-    if (!iframeFocused) {
+    // ONLY track progress when user is actively watching AND tab is visible
+    if (!isWatching || !isTabVisible) {
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
         progressIntervalRef.current = null;
@@ -145,7 +142,7 @@ export function VideoPlayer({
         clearInterval(progressIntervalRef.current);
       }
     };
-  }, [byte.byte_id, isCompleted, iframeFocused, currentProgress, onProgressUpdate, nextByte, onNext]);
+  }, [byte.byte_id, isCompleted, isWatching, isTabVisible, currentProgress, onProgressUpdate, nextByte, onNext]);
 
   // Extract file ID from Google Drive URL
   const getEmbedUrl = (url: string) => {
@@ -259,8 +256,9 @@ export function VideoPlayer({
 
         {/* Video Container - Vertical/Shorts aspect ratio */}
         <div 
-          className="relative flex-1 min-h-0 flex items-center justify-center bg-muted/30 rounded-2xl overflow-hidden"
+          className="relative flex-1 min-h-0 flex items-center justify-center bg-muted/30 rounded-2xl overflow-hidden cursor-pointer"
           onContextMenu={handleContextMenu}
+          onClick={handleVideoAreaClick}
         >
           {/* Video wrapper with proper vertical aspect ratio */}
           <div 

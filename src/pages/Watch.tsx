@@ -22,6 +22,7 @@ export default function Watch() {
   const [state, setState] = useLocalStorage<WatchState>(STORAGE_KEY, defaultState);
   const [currentByte, setCurrentByte] = useState<Byte | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [autoStartVideo, setAutoStartVideo] = useState(false);
   
   // Progress tracking
   const { 
@@ -60,6 +61,7 @@ export default function Watch() {
 
   const handleSelectByte = useCallback((byte: Byte) => {
     setCurrentByte(byte);
+    setAutoStartVideo(true); // Auto-start when selected from playlist
   }, []);
 
   const handlePrevious = useCallback(() => {
@@ -167,6 +169,7 @@ export default function Watch() {
             onProgressUpdate={handleProgressUpdate}
             isFullscreen={isFullscreen}
             onToggleFullscreen={handleToggleFullscreen}
+            autoStart={autoStartVideo}
           />
         </motion.div>
       </div>
