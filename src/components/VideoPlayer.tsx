@@ -74,12 +74,10 @@ export function VideoPlayer({
     }
   }, [isWatching]);
 
-  // Reset watch time/loop count when byte changes.
-  // IMPORTANT: autoStart is a "pulse" signal; we should NOT stop watching when it flips back to false.
+  // Reset watch time/loop count when byte changes
   useEffect(() => {
     setWatchTime(0);
     setLoopCount(0);
-    setIsWatching(autoStart);
 
     // Clear previous interval
     if (progressIntervalRef.current) {
@@ -88,9 +86,12 @@ export function VideoPlayer({
     }
   }, [byte.byte_id]);
 
-  // Consume autoStart pulses (start watching) without ever forcing a stop.
+  // Auto-start watching when autoStart prop is true (triggered by playlist click or navigation)
+  // This runs on mount AND whenever autoStart changes to true
   useEffect(() => {
-    if (autoStart) setIsWatching(true);
+    if (autoStart) {
+      setIsWatching(true);
+    }
   }, [autoStart]);
 
   // Simulate progress tracking (since we can't access iframe video events)
