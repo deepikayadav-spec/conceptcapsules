@@ -81,7 +81,7 @@ export default function Watch() {
   // Reset autoStartVideo after it's consumed
   useEffect(() => {
     if (autoStartVideo) {
-      const timer = setTimeout(() => setAutoStartVideo(false), 100);
+      const timer = setTimeout(() => setAutoStartVideo(false), 500);
       return () => clearTimeout(timer);
     }
   }, [currentByte, autoStartVideo]);

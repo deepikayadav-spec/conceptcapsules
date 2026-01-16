@@ -89,6 +89,7 @@ export function VideoPlayer({
   // Assume average video is ~60 seconds for progress calculation
   const ESTIMATED_VIDEO_DURATION = 60; // seconds
 
+  // Track watch time with interval
   useEffect(() => {
     // Don't track if already completed
     if (isCompleted) {
@@ -108,33 +109,9 @@ export function VideoPlayer({
       return;
     }
 
-    // Update progress every second ONLY when watching
+    // Update watch time every second ONLY when watching
     progressIntervalRef.current = window.setInterval(() => {
-      setWatchTime(prev => {
-        const newTime = prev + 1;
-        const percentage = Math.min((newTime / ESTIMATED_VIDEO_DURATION) * 100, 100);
-        
-        // Only update if progress increased
-        if (percentage > currentProgress) {
-          onProgressUpdate(percentage);
-        }
-
-        // Check if one loop is complete (reached 100%)
-        if (percentage >= 100) {
-          setLoopCount(prevLoop => {
-            const newLoopCount = prevLoop + 1;
-            // Auto-advance after 3 loops if there's a next video
-            if (newLoopCount >= 3 && nextByte) {
-              setTimeout(() => onNext(), 1000);
-            }
-            return newLoopCount;
-          });
-          // Reset watch time for next loop
-          return 0;
-        }
-        
-        return newTime;
-      });
+      setWatchTime(prev => prev + 1);
     }, 1000);
 
     return () => {
@@ -142,7 +119,36 @@ export function VideoPlayer({
         clearInterval(progressIntervalRef.current);
       }
     };
-  }, [byte.byte_id, isCompleted, isWatching, isTabVisible, currentProgress, onProgressUpdate, nextByte, onNext]);
+  }, [byte.byte_id, isCompleted, isWatching, isTabVisible]);
+
+  // Calculate and update progress based on watch time
+  useEffect(() => {
+    if (isCompleted || !isWatching || !isTabVisible) return;
+    
+    const percentage = Math.min((watchTime / ESTIMATED_VIDEO_DURATION) * 100, 100);
+    
+    if (percentage > currentProgress) {
+      onProgressUpdate(percentage);
+    }
+  }, [watchTime, isCompleted, isWatching, isTabVisible, currentProgress, onProgressUpdate]);
+
+  // Track when a loop completes (progress reaches 100%)
+  useEffect(() => {
+    if (currentProgress >= 100 && !isCompleted) {
+      setLoopCount(prev => prev + 1);
+      setWatchTime(0); // Reset for next loop
+    }
+  }, [currentProgress, isCompleted]);
+
+  // Auto-advance after 3 loops
+  useEffect(() => {
+    if (loopCount >= 3 && nextByte && !isCompleted) {
+      const timer = setTimeout(() => {
+        onNext();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [loopCount, nextByte, isCompleted, onNext]);
 
   // Extract file ID from Google Drive URL
   const getEmbedUrl = (url: string) => {
