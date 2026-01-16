@@ -67,14 +67,24 @@ export default function Watch() {
   const handlePrevious = useCallback(() => {
     if (currentIndex > 0) {
       setCurrentByte(bytes[currentIndex - 1]);
+      setAutoStartVideo(true);
     }
   }, [bytes, currentIndex]);
 
   const handleNext = useCallback(() => {
     if (currentIndex < bytes.length - 1) {
       setCurrentByte(bytes[currentIndex + 1]);
+      setAutoStartVideo(true);
     }
   }, [bytes, currentIndex]);
+
+  // Reset autoStartVideo after it's consumed
+  useEffect(() => {
+    if (autoStartVideo) {
+      const timer = setTimeout(() => setAutoStartVideo(false), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [currentByte, autoStartVideo]);
 
   // Handle progress update from video player
   const handleProgressUpdate = useCallback((percentage: number) => {
