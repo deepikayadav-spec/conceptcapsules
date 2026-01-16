@@ -11,6 +11,7 @@ export interface WatchState {
   completedVideos: string[];
   leftPanelOpen: boolean;
   rightPanelOpen: boolean;
+  leftPanelSize?: number;
 }
 
 export const STORAGE_KEY = 'concept-capsule-state';

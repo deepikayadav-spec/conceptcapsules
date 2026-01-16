@@ -9,12 +9,18 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useVideoProgress } from '@/hooks/useVideoProgress';
 import { WatchState, STORAGE_KEY, Byte } from '@/types/byte';
 import { Loader2 } from 'lucide-react';
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from '@/components/ui/resizable';
 
 const defaultState: WatchState = {
   lastVideoId: null,
   completedVideos: [],
   leftPanelOpen: true,
   rightPanelOpen: false,
+  leftPanelSize: 25, // Default size percentage
 };
 
 export default function Watch() {
@@ -102,6 +108,12 @@ export default function Watch() {
     setState(prev => ({ ...prev, leftPanelOpen: !prev.leftPanelOpen }));
   }, [setState]);
 
+  const handlePanelResize = useCallback((sizes: number[]) => {
+    if (sizes[0] !== undefined) {
+      setState(prev => ({ ...prev, leftPanelSize: sizes[0] }));
+    }
+  }, [setState]);
+
   // Keyboard shortcuts
   useKeyboardShortcuts({
     onToggleLeftPanel: handleToggleLeftPanel,
@@ -148,40 +160,91 @@ export default function Watch() {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex min-h-0">
-        {/* Left Panel - Playlist */}
-        {!isFullscreen && (
-          <PlaylistPanel
-            bytes={bytes}
-            currentByteId={currentByte.byte_id}
-            completedVideos={completedVideos}
-            isOpen={state.leftPanelOpen}
-            onToggle={handleToggleLeftPanel}
-            onSelectByte={handleSelectByte}
-            getProgress={getProgress}
-          />
+      <div className="flex-1 min-h-0">
+        {isFullscreen ? (
+          <div className="h-full p-4 lg:p-6">
+            <VideoPlayer
+              byte={currentByte}
+              byteNumber={currentIndex + 1}
+              totalBytes={bytes.length}
+              isCompleted={completedVideos.includes(currentByte.byte_id)}
+              currentProgress={currentProgress}
+              nextByte={currentIndex < bytes.length - 1 ? bytes[currentIndex + 1] : null}
+              onPrevious={handlePrevious}
+              onNext={handleNext}
+              onProgressUpdate={handleProgressUpdate}
+              isFullscreen={isFullscreen}
+              onToggleFullscreen={handleToggleFullscreen}
+              autoStart={autoStartVideo}
+            />
+          </div>
+        ) : (
+          <ResizablePanelGroup
+            direction="horizontal"
+            onLayout={handlePanelResize}
+            className="h-full"
+          >
+            {/* Left Panel - Playlist */}
+            {state.leftPanelOpen && (
+              <>
+                <ResizablePanel
+                  defaultSize={state.leftPanelSize || 25}
+                  minSize={15}
+                  maxSize={40}
+                  className="min-w-[200px]"
+                >
+                  <PlaylistPanel
+                    bytes={bytes}
+                    currentByteId={currentByte.byte_id}
+                    completedVideos={completedVideos}
+                    isOpen={state.leftPanelOpen}
+                    onToggle={handleToggleLeftPanel}
+                    onSelectByte={handleSelectByte}
+                    getProgress={getProgress}
+                  />
+                </ResizablePanel>
+                <ResizableHandle withHandle className="bg-border/50 hover:bg-primary/20 transition-colors" />
+              </>
+            )}
+
+            {/* Center - Video Player */}
+            <ResizablePanel defaultSize={state.leftPanelOpen ? (100 - (state.leftPanelSize || 25)) : 100}>
+              <motion.div
+                layout
+                className="h-full p-4 lg:p-6"
+              >
+                <VideoPlayer
+                  byte={currentByte}
+                  byteNumber={currentIndex + 1}
+                  totalBytes={bytes.length}
+                  isCompleted={completedVideos.includes(currentByte.byte_id)}
+                  currentProgress={currentProgress}
+                  nextByte={currentIndex < bytes.length - 1 ? bytes[currentIndex + 1] : null}
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                  onProgressUpdate={handleProgressUpdate}
+                  isFullscreen={isFullscreen}
+                  onToggleFullscreen={handleToggleFullscreen}
+                  autoStart={autoStartVideo}
+                />
+              </motion.div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         )}
 
-        {/* Center - Video Player */}
-        <motion.div
-          layout
-          className="flex-1 min-w-0 p-4 lg:p-6"
-        >
-          <VideoPlayer
-            byte={currentByte}
-            byteNumber={currentIndex + 1}
-            totalBytes={bytes.length}
-            isCompleted={completedVideos.includes(currentByte.byte_id)}
-            currentProgress={currentProgress}
-            nextByte={currentIndex < bytes.length - 1 ? bytes[currentIndex + 1] : null}
-            onPrevious={handlePrevious}
-            onNext={handleNext}
-            onProgressUpdate={handleProgressUpdate}
-            isFullscreen={isFullscreen}
-            onToggleFullscreen={handleToggleFullscreen}
-            autoStart={autoStartVideo}
-          />
-        </motion.div>
+        {/* Collapsed panel toggle button */}
+        {!isFullscreen && !state.leftPanelOpen && (
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            onClick={handleToggleLeftPanel}
+            className="fixed left-0 top-1/2 -translate-y-1/2 h-24 w-6 glass border border-border/50 rounded-r-lg flex items-center justify-center hover:bg-muted/50 transition-colors z-10"
+          >
+            <span className="text-xs font-medium text-muted-foreground [writing-mode:vertical-lr]">
+              Playlist
+            </span>
+          </motion.button>
+        )}
       </div>
     </div>
   );
