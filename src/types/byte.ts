@@ -26,7 +26,7 @@ export const TOPIC_DISPLAY_MAP: Record<string, string> = {
   'RECURSION': 'Recursion',
   'LOOPS': 'Loops',
   'CONDITIONAL_STATEMENTS': 'Conditional Statements',
-  'PYTHON_GENERAL': 'Python General',
+  'PYTHON_GENERAL': 'Miscellaneous',
   'TYPE_CONVERSION': 'Type Conversion',
   'FUNCTIONS': 'Functions',
 };

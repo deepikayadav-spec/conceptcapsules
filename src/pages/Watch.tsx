@@ -92,11 +92,7 @@ export default function Watch() {
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
-    onNext: handleNext,
-    onPrevious: handlePrevious,
-    onFullscreen: handleToggleFullscreen,
     onToggleLeftPanel: handleToggleLeftPanel,
-    onToggleNotesPanel: () => {},
   });
 
   // Get current video progress
