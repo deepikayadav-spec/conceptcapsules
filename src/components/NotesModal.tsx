@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, useDragControls } from 'framer-motion';
+import { motion, useDragControls, useMotionValue } from 'framer-motion';
 import { FileText, Save, Download, X, Minus, GripHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,6 +11,19 @@ interface NotesModalProps {
 }
 
 const NOTES_STORAGE_KEY = 'conceptCapsuleNotes';
+const NOTES_UI_STORAGE_KEY = 'conceptCapsuleNotesUI';
+
+interface NotesUIState {
+  x: number;
+  y: number;
+  isMinimized: boolean;
+}
+
+const DEFAULT_UI_STATE: NotesUIState = {
+  x: 0,
+  y: 0,
+  isMinimized: false,
+};
 
 export function NotesModal({ isOpen, onClose }: NotesModalProps) {
   const [notes, setNotes] = useState('');
@@ -19,18 +32,49 @@ export function NotesModal({ isOpen, onClose }: NotesModalProps) {
   const { toast } = useToast();
   const dragControls = useDragControls();
   const constraintsRef = useRef<HTMLDivElement>(null);
+  
+  // Motion values for position persistence
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
 
-  // Load notes on mount
+  // Load notes and UI state on mount
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(NOTES_STORAGE_KEY);
-      if (stored) {
-        setNotes(stored);
+      const storedNotes = localStorage.getItem(NOTES_STORAGE_KEY);
+      if (storedNotes) {
+        setNotes(storedNotes);
+      }
+      
+      const storedUI = localStorage.getItem(NOTES_UI_STORAGE_KEY);
+      if (storedUI) {
+        const uiState: NotesUIState = JSON.parse(storedUI);
+        x.set(uiState.x);
+        y.set(uiState.y);
+        setIsMinimized(uiState.isMinimized);
       }
     } catch (error) {
       console.error('Error loading notes:', error);
     }
   }, []);
+
+  // Save UI state helper
+  const saveUIState = useCallback(() => {
+    try {
+      const uiState: NotesUIState = {
+        x: x.get(),
+        y: y.get(),
+        isMinimized,
+      };
+      localStorage.setItem(NOTES_UI_STORAGE_KEY, JSON.stringify(uiState));
+    } catch (error) {
+      console.error('Error saving UI state:', error);
+    }
+  }, [x, y, isMinimized]);
+
+  // Save UI state when minimized changes
+  useEffect(() => {
+    saveUIState();
+  }, [isMinimized, saveUIState]);
 
   // Save notes with debounce
   const saveNotes = useCallback((value: string) => {
@@ -58,12 +102,15 @@ export function NotesModal({ isOpen, onClose }: NotesModalProps) {
     setNotes(e.target.value);
   };
 
+  const handleDragEnd = () => {
+    saveUIState();
+  };
+
   const downloadNotes = () => {
     if (!notes || !notes.trim()) {
       toast({
-        title: "No notes to download",
-        description: "No notes to download yet.",
-        variant: "destructive",
+        title: "No notes to download yet",
+        description: "Start taking notes while watching videos.",
       });
       return;
     }
@@ -109,21 +156,16 @@ ${notes}
       <motion.div
         drag
         dragControls={dragControls}
+        dragListener={false}
         dragMomentum={false}
         dragConstraints={constraintsRef}
         dragElastic={0}
-        initial={{ opacity: 0, scale: 0.95, x: 'calc(100vw - 420px)', y: 80 }}
-        animate={{ 
-          opacity: 1, 
-          scale: 1,
-        }}
+        style={{ x, y, width: isMinimized ? '200px' : '360px' }}
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="absolute pointer-events-auto"
-        style={{ 
-          width: isMinimized ? '200px' : '360px',
-          right: '20px',
-          top: '80px',
-        }}
+        onDragEnd={handleDragEnd}
+        className="absolute pointer-events-auto right-5 top-20"
       >
         <div className="bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl overflow-hidden">
           {/* Drag Handle Header */}
