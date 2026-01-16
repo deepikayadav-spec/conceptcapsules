@@ -280,21 +280,28 @@ export function VideoPlayer({
               aspectRatio: '9/16',
             }}
           >
-            <iframe
-              src={getEmbedUrl(byte.byte_url)}
-              className="absolute inset-0 w-full h-full"
-              style={{ objectFit: 'contain' }}
-              allow="autoplay; encrypted-media"
-              allowFullScreen
-              title={byte.byte_description}
-              onLoad={() => {
-                document.body.focus();
-              }}
-            />
-
-            {/* Overlay to hide Google Drive's Pop-out button */}
+            {/* Iframe crop container - shifts iframe up to hide Google Drive toolbar */}
+            <div className="absolute inset-0 overflow-hidden">
+              <iframe
+                src={getEmbedUrl(byte.byte_url)}
+                className="absolute w-full"
+                style={{ 
+                  objectFit: 'contain',
+                  top: '-48px',
+                  height: 'calc(100% + 48px)',
+                }}
+                allow="autoplay; encrypted-media"
+                allowFullScreen
+                title={byte.byte_description}
+                onLoad={() => {
+                  document.body.focus();
+                }}
+              />
+            </div>
+            
+            {/* Click blocker for any remaining toolbar area (transparent) */}
             <div 
-              className="absolute top-0 right-0 w-20 h-12 bg-black z-10 pointer-events-auto"
+              className="absolute top-0 right-0 w-20 h-8 z-10 pointer-events-auto"
               style={{ borderTopRightRadius: '12px' }}
             />
           </div>
