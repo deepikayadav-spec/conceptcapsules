@@ -74,16 +74,24 @@ export function VideoPlayer({
     }
   }, [isWatching]);
 
-  // Reset watch time, loop count, and start watching when byte changes (if autoStart)
+  // Reset watch time/loop count when byte changes.
+  // IMPORTANT: autoStart is a "pulse" signal; we should NOT stop watching when it flips back to false.
   useEffect(() => {
     setWatchTime(0);
     setLoopCount(0);
-    setIsWatching(autoStart); // Auto-start if selected from playlist
+    setIsWatching(autoStart);
+
     // Clear previous interval
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
     }
-  }, [byte.byte_id, autoStart]);
+  }, [byte.byte_id]);
+
+  // Consume autoStart pulses (start watching) without ever forcing a stop.
+  useEffect(() => {
+    if (autoStart) setIsWatching(true);
+  }, [autoStart]);
 
   // Simulate progress tracking (since we can't access iframe video events)
   // Assume average video is ~60 seconds for progress calculation
@@ -91,16 +99,7 @@ export function VideoPlayer({
 
   // Track watch time with interval
   useEffect(() => {
-    // Don't track if already completed
-    if (isCompleted) {
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-        progressIntervalRef.current = null;
-      }
-      return;
-    }
-
-    // ONLY track progress when user is actively watching AND tab is visible
+    // ONLY track time when user is actively watching AND tab is visible
     if (!isWatching || !isTabVisible) {
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
@@ -117,38 +116,42 @@ export function VideoPlayer({
     return () => {
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
       }
     };
-  }, [byte.byte_id, isCompleted, isWatching, isTabVisible]);
+  }, [byte.byte_id, isWatching, isTabVisible]);
 
-  // Calculate and update progress based on watch time
+  // Calculate and update progress based on watch time (completion at >=95% is handled upstream)
   useEffect(() => {
     if (isCompleted || !isWatching || !isTabVisible) return;
-    
+
     const percentage = Math.min((watchTime / ESTIMATED_VIDEO_DURATION) * 100, 100);
-    
+
     if (percentage > currentProgress) {
       onProgressUpdate(percentage);
     }
   }, [watchTime, isCompleted, isWatching, isTabVisible, currentProgress, onProgressUpdate]);
 
-  // Track when a loop completes (progress reaches 100%)
+  // Track when a loop completes based on watch time.
+  // This MUST keep working even after completion, because auto-advance is based on 3 full loops.
   useEffect(() => {
-    if (currentProgress >= 100 && !isCompleted) {
-      setLoopCount(prev => prev + 1);
-      setWatchTime(0); // Reset for next loop
-    }
-  }, [currentProgress, isCompleted]);
+    if (!isWatching || !isTabVisible) return;
 
-  // Auto-advance after 3 loops
+    if (watchTime >= ESTIMATED_VIDEO_DURATION) {
+      setLoopCount(prev => prev + 1);
+      setWatchTime(0);
+    }
+  }, [watchTime, isWatching, isTabVisible]);
+
+  // Auto-advance after exactly 3 loops
   useEffect(() => {
-    if (loopCount >= 3 && nextByte && !isCompleted) {
+    if (loopCount === 3 && nextByte) {
       const timer = setTimeout(() => {
         onNext();
       }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [loopCount, nextByte, isCompleted, onNext]);
+  }, [loopCount, nextByte, onNext]);
 
   // Extract file ID from Google Drive URL
   const getEmbedUrl = (url: string) => {
