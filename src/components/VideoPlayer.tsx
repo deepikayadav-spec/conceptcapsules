@@ -12,7 +12,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { TopicBadge } from '@/components/TopicBadge';
 import { Byte } from '@/types/byte';
-import confetti from 'canvas-confetti';
 import { NotesModal } from '@/components/NotesModal';
 
 interface VideoPlayerProps {
@@ -33,8 +32,8 @@ interface VideoPlayerProps {
  * Video Player Component
  * 
  * Note: Google Drive iframes don't expose video events (timeupdate, ended).
- * Progress is simulated based on time spent watching.
- * Users can manually mark videos as complete when finished.
+ * Progress is simulated based on time spent watching ONLY when iframe is focused.
+ * Auto-advances to next video after 3 complete loops.
  */
 export function VideoPlayer({
   byte,
@@ -53,8 +52,8 @@ export function VideoPlayer({
   const [iframeFocused, setIframeFocused] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [watchTime, setWatchTime] = useState(0);
+  const [loopCount, setLoopCount] = useState(0);
   const progressIntervalRef = useRef<number | null>(null);
-  const hasTriggeredConfetti = useRef(false);
 
   // Track when iframe gets/loses focus
   useEffect(() => {
@@ -79,10 +78,10 @@ export function VideoPlayer({
     };
   }, []);
 
-  // Reset watch time when byte changes
+  // Reset watch time and loop count when byte changes
   useEffect(() => {
     setWatchTime(0);
-    hasTriggeredConfetti.current = false;
+    setLoopCount(0);
     // Clear previous interval
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current);
@@ -94,14 +93,25 @@ export function VideoPlayer({
   const ESTIMATED_VIDEO_DURATION = 60; // seconds
 
   useEffect(() => {
+    // Don't track if already completed
     if (isCompleted) {
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
       }
       return;
     }
 
-    // Update progress every second when watching
+    // ONLY track progress when iframe is focused (user clicked play)
+    if (!iframeFocused) {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      return;
+    }
+
+    // Update progress every second ONLY when watching
     progressIntervalRef.current = window.setInterval(() => {
       setWatchTime(prev => {
         const newTime = prev + 1;
@@ -110,6 +120,20 @@ export function VideoPlayer({
         // Only update if progress increased
         if (percentage > currentProgress) {
           onProgressUpdate(percentage);
+        }
+
+        // Check if one loop is complete (reached 100%)
+        if (percentage >= 100) {
+          setLoopCount(prevLoop => {
+            const newLoopCount = prevLoop + 1;
+            // Auto-advance after 3 loops if there's a next video
+            if (newLoopCount >= 3 && nextByte) {
+              setTimeout(() => onNext(), 1000);
+            }
+            return newLoopCount;
+          });
+          // Reset watch time for next loop
+          return 0;
         }
         
         return newTime;
@@ -121,20 +145,7 @@ export function VideoPlayer({
         clearInterval(progressIntervalRef.current);
       }
     };
-  }, [byte.byte_id, isCompleted, currentProgress, onProgressUpdate]);
-
-  // Fire confetti when auto-completed (progress reaches 95%+)
-  useEffect(() => {
-    if (isCompleted && !hasTriggeredConfetti.current) {
-      hasTriggeredConfetti.current = true;
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#14b8a6', '#8b5cf6', '#f59e0b', '#ec4899'],
-      });
-    }
-  }, [isCompleted]);
+  }, [byte.byte_id, isCompleted, iframeFocused, currentProgress, onProgressUpdate, nextByte, onNext]);
 
   // Extract file ID from Google Drive URL
   const getEmbedUrl = (url: string) => {
