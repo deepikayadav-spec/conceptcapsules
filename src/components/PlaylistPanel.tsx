@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, ChevronLeft, ChevronDown, CheckCircle2, Play, X } from 'lucide-react';
+import { Search, ChevronLeft, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -161,19 +161,11 @@ export function PlaylistPanel({
                     <div className="flex items-start gap-3">
                       <div className={cn(
                         'w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-sm font-bold transition-colors',
-                        isCompleted 
-                          ? 'gradient-primary text-primary-foreground' 
-                          : isActive
-                            ? 'bg-primary/20 text-primary'
-                            : 'bg-muted text-muted-foreground group-hover:bg-muted-foreground/20'
+                        isActive
+                          ? 'bg-primary/20 text-primary'
+                          : 'bg-muted text-muted-foreground group-hover:bg-muted-foreground/20'
                       )}>
-                        {isCompleted ? (
-                          <CheckCircle2 className="w-4 h-4" />
-                        ) : isActive ? (
-                          <Play className="w-3.5 h-3.5 fill-current" />
-                        ) : (
-                          originalIndex + 1
-                        )}
+                        {originalIndex + 1}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className={cn(
