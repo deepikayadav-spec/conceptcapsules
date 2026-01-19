@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { getTopicDisplayName } from '@/types/byte';
@@ -25,34 +26,39 @@ const topicColors: Record<string, { bg: string; text: string; activeBg: string }
   FUNCTIONS: { bg: 'bg-lime-500/15', text: 'text-lime-600 dark:text-lime-400', activeBg: 'bg-lime-500' },
 };
 
-export function TopicBadge({ topic, size = 'md', onClick, active = false, className }: TopicBadgeProps) {
-  const colors = topicColors[topic] || { 
-    bg: 'bg-muted', 
-    text: 'text-muted-foreground', 
-    activeBg: 'bg-primary' 
-  };
+export const TopicBadge = forwardRef<HTMLButtonElement, TopicBadgeProps>(
+  ({ topic, size = 'md', onClick, active = false, className }, ref) => {
+    const colors = topicColors[topic] || { 
+      bg: 'bg-muted', 
+      text: 'text-muted-foreground', 
+      activeBg: 'bg-primary' 
+    };
 
-  const displayName = getTopicDisplayName(topic);
+    const displayName = getTopicDisplayName(topic);
 
-  return (
-    <motion.button
-      whileHover={onClick ? { scale: 1.02 } : undefined}
-      whileTap={onClick ? { scale: 0.98 } : undefined}
-      onClick={onClick}
-      disabled={!onClick}
-      type="button"
-      className={cn(
-        'inline-flex items-center rounded-full font-medium transition-all duration-200',
-        size === 'sm' ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs',
-        active 
-          ? `${colors.activeBg} text-white` 
-          : `${colors.bg} ${colors.text}`,
-        onClick && 'cursor-pointer hover:opacity-80',
-        !onClick && 'cursor-default',
-        className
-      )}
-    >
-      {displayName}
-    </motion.button>
-  );
-}
+    return (
+      <motion.button
+        ref={ref}
+        whileHover={onClick ? { scale: 1.02 } : undefined}
+        whileTap={onClick ? { scale: 0.98 } : undefined}
+        onClick={onClick}
+        disabled={!onClick}
+        type="button"
+        className={cn(
+          'inline-flex items-center rounded-full font-medium transition-all duration-200',
+          size === 'sm' ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs',
+          active 
+            ? `${colors.activeBg} text-white` 
+            : `${colors.bg} ${colors.text}`,
+          onClick && 'cursor-pointer hover:opacity-80',
+          !onClick && 'cursor-default',
+          className
+        )}
+      >
+        {displayName}
+      </motion.button>
+    );
+  }
+);
+
+TopicBadge.displayName = 'TopicBadge';

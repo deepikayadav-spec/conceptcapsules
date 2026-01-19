@@ -24,8 +24,7 @@ export function ProgressIndicator({ completed, total }: ProgressIndicatorProps) 
         </span>
         <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden mt-1">
           <motion.div
-            key={percentage}
-            initial={{ width: 0 }}
+            initial={false}
             animate={{ width: `${percentage}%` }}
             transition={{ duration: 0.5, ease: 'easeOut' }}
             className="h-full gradient-primary rounded-full"

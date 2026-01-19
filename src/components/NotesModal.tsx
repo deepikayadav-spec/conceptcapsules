@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, forwardRef } from 'react';
 import { motion, useDragControls, useMotionValue } from 'framer-motion';
 import { FileText, Save, Download, X, Minus, GripHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -25,7 +25,7 @@ const DEFAULT_UI_STATE: NotesUIState = {
   isMinimized: false,
 };
 
-export function NotesModal({ isOpen, onClose }: NotesModalProps) {
+export const NotesModal = forwardRef<HTMLDivElement, NotesModalProps>(function NotesModal({ isOpen, onClose }, ref) {
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -246,4 +246,6 @@ ${notes}
       </motion.div>
     </div>
   );
-}
+});
+
+NotesModal.displayName = 'NotesModal';
