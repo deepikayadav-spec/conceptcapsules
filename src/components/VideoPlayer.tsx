@@ -78,6 +78,7 @@ export function VideoPlayer({
   useEffect(() => {
     setWatchTime(0);
     setLoopCount(0);
+    setIsWatching(false); // Reset watching state on video change
 
     // Clear previous interval
     if (progressIntervalRef.current) {
@@ -87,12 +88,16 @@ export function VideoPlayer({
   }, [byte.byte_id]);
 
   // Auto-start watching when autoStart prop is true (triggered by playlist click or navigation)
-  // This runs on mount AND whenever autoStart changes to true
+  // Runs when byte changes with autoStart, or when autoStart becomes true
   useEffect(() => {
     if (autoStart) {
-      setIsWatching(true);
+      // Small delay to ensure the reset effect runs first
+      const timer = setTimeout(() => {
+        setIsWatching(true);
+      }, 50);
+      return () => clearTimeout(timer);
     }
-  }, [autoStart]);
+  }, [autoStart, byte.byte_id]);
 
   // Simulate progress tracking (since we can't access iframe video events)
   // Assume average video is ~60 seconds for progress calculation
