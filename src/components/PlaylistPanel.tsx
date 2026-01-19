@@ -4,6 +4,7 @@ import { Search, ChevronLeft, X, Check } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Switch } from '@/components/ui/switch';
 import { TopicBadge } from '@/components/TopicBadge';
 import { Byte, ALL_TOPICS, getTopicDisplayName } from '@/types/byte';
 import { cn } from '@/lib/utils';
@@ -36,6 +37,7 @@ export function PlaylistPanel({
 }: PlaylistPanelProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTopic, setSelectedTopic] = useState<string>('all');
+  const [showUnwatchedOnly, setShowUnwatchedOnly] = useState(false);
 
   const filteredBytes = useMemo(() => {
     return bytes.filter(byte => {
@@ -50,20 +52,25 @@ export function PlaylistPanel({
         selectedTopic === 'all' ||
         byte.byte_topics.includes(selectedTopic);
 
-      return matchesSearch && matchesTopic;
+      const matchesCompletion = 
+        !showUnwatchedOnly || 
+        !completedVideos.includes(byte.byte_id);
+
+      return matchesSearch && matchesTopic && matchesCompletion;
     });
-  }, [bytes, searchQuery, selectedTopic]);
+  }, [bytes, searchQuery, selectedTopic, showUnwatchedOnly, completedVideos]);
 
   const clearFilters = () => {
     setSearchQuery('');
     setSelectedTopic('all');
+    setShowUnwatchedOnly(false);
   };
 
   const handleTopicChange = (value: string) => {
     setSelectedTopic(value);
   };
 
-  const hasActiveFilters = searchQuery || selectedTopic !== 'all';
+  const hasActiveFilters = searchQuery || selectedTopic !== 'all' || showUnwatchedOnly;
 
   return (
     <div className="h-full glass border-r border-border/50 flex flex-col overflow-hidden">
@@ -113,6 +120,21 @@ export function PlaylistPanel({
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Unwatched filter toggle */}
+        <div className="mt-3 flex items-center justify-between">
+          <label 
+            htmlFor="unwatched-toggle" 
+            className="text-sm text-muted-foreground cursor-pointer"
+          >
+            Show unwatched only
+          </label>
+          <Switch 
+            id="unwatched-toggle"
+            checked={showUnwatchedOnly}
+            onCheckedChange={setShowUnwatchedOnly}
+          />
         </div>
 
         {hasActiveFilters && (
