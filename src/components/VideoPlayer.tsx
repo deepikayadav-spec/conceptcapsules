@@ -249,6 +249,7 @@ export function VideoPlayer({
   // Get video URLs
   const directUrl = driveUrlToDirect(byte.byte_url);
   const previewUrl = driveUrlToPreview(byte.byte_url);
+  const nextPreviewUrl = nextByte ? driveUrlToPreview(nextByte.byte_url) : null;
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -496,6 +497,25 @@ export function VideoPlayer({
         isOpen={notesOpen}
         onClose={() => setNotesOpen(false)}
       />
+
+      {/* Preload next video iframe (hidden) */}
+      {nextPreviewUrl && (
+        <iframe
+          src={nextPreviewUrl}
+          className="sr-only"
+          style={{ 
+            position: 'absolute',
+            width: 1,
+            height: 1,
+            opacity: 0,
+            pointerEvents: 'none',
+          }}
+          aria-hidden="true"
+          tabIndex={-1}
+          loading="eager"
+          title="Preloading next video"
+        />
+      )}
     </>
   );
 }
