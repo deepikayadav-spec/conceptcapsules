@@ -34,7 +34,6 @@ interface VideoPlayerProps {
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
   autoStart?: boolean;
-  requireCompletionForNext?: boolean; // When true, Next button disabled until video ends
 }
 
 /**
@@ -57,7 +56,6 @@ export function VideoPlayer({
   isFullscreen,
   onToggleFullscreen,
   autoStart = false,
-  requireCompletionForNext = true,
 }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -74,9 +72,6 @@ export function VideoPlayer({
   const didMarkCompletedRef = useRef(false);
   const iframeTimeoutRef = useRef<number | null>(null);
   
-  // Track if video has been watched to completion THIS session (not persisted)
-  const [videoEndedThisSession, setVideoEndedThisSession] = useState(false);
-  
   // For iframe fallback - simulated tracking
   const [iframeWatchTime, setIframeWatchTime] = useState(0);
   const [iframeIsWatching, setIframeIsWatching] = useState(false);
@@ -86,10 +81,6 @@ export function VideoPlayer({
   // Use byte's duration if available, otherwise default to 30 seconds
   const videoDuration = byte.duration || 30;
   const IFRAME_LOAD_TIMEOUT = 10000; // 10 seconds
-  
-  // Determine if Next button should be enabled
-  // Video is considered "watched" if: already completed previously OR ended this session
-  const canProceedToNext = isCompleted || videoEndedThisSession || !requireCompletionForNext;
 
   // Track tab visibility
   useEffect(() => {
@@ -112,7 +103,6 @@ export function VideoPlayer({
     setIframeKey(prev => prev + 1);
     setIframeWatchTime(0);
     setIframeIsWatching(false); // Don't auto-start - wait for iframe load
-    setVideoEndedThisSession(false); // Reset session completion flag
     
     // Clear any existing timeout
     if (iframeTimeoutRef.current) {
@@ -287,10 +277,9 @@ export function VideoPlayer({
       onProgressUpdate(percentage);
     }
     
-    // Mark completed at 95% or when full duration reached - unlock Next immediately
+    // Mark completed at 95% or when full duration reached
     if ((percentage >= 95 || iframeWatchTime >= videoDuration) && !didMarkCompletedRef.current) {
       didMarkCompletedRef.current = true;
-      setVideoEndedThisSession(true); // Enable Next button IMMEDIATELY
       if (iframeIntervalRef.current) {
         clearInterval(iframeIntervalRef.current); // Stop the timer
         iframeIntervalRef.current = null;
@@ -302,7 +291,6 @@ export function VideoPlayer({
     
     // Handle loop for iframe (video "ended") - only if we haven't stopped already
     if (iframeWatchTime >= videoDuration && iframeIntervalRef.current) {
-      setVideoEndedThisSession(true); // Video completed a full loop
       setLoopCount(prev => prev + 1);
       setIframeWatchTime(0);
     }
@@ -587,16 +575,12 @@ export function VideoPlayer({
           </Button>
 
           <Button
-            variant={canProceedToNext ? "outline" : "ghost"}
+            variant="outline"
             onClick={onNext}
-            disabled={byteNumber === totalBytes || !canProceedToNext}
-            className={`rounded-xl gap-2 ${isFullscreen ? 'text-base px-5 py-2.5' : ''} ${
-              !canProceedToNext ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
-            title={!canProceedToNext ? 'Watch the video to unlock' : 'Go to next video'}
+            disabled={byteNumber === totalBytes}
+            className={`rounded-xl gap-2 ${isFullscreen ? 'text-base px-5 py-2.5' : ''}`}
           >
-            <span className="hidden sm:inline">{canProceedToNext ? 'Next' : 'Watch to unlock'}</span>
-            <span className="sm:hidden">{canProceedToNext ? '' : '🔒'}</span>
+            <span className="hidden sm:inline">Next</span>
             <ChevronRight className={isFullscreen ? 'w-5 h-5' : 'w-4 h-4'} />
           </Button>
         </div>
