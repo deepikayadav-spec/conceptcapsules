@@ -32,13 +32,15 @@ export function driveUrlToDirect(url: string): string {
 /**
  * Convert Google Drive URL to preview embed URL
  * Uses export=view format which tends to load faster than /preview
+ * @param autoplay - Whether to add autoplay parameter (default: true)
  */
-export function driveUrlToPreview(url: string): string {
+export function driveUrlToPreview(url: string, autoplay: boolean = true): string {
   const id = extractDriveFileId(url);
   if (!id) return url;
   
-  // Use export=view format - tends to load faster and starts video immediately
-  return `https://drive.google.com/file/d/${id}/preview?autoplay=1`;
+  // Use preview format - tends to load faster
+  const baseUrl = `https://drive.google.com/file/d/${id}/preview`;
+  return autoplay ? `${baseUrl}?autoplay=1` : baseUrl;
 }
 
 /**
