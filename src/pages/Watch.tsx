@@ -218,6 +218,7 @@ export default function Watch() {
                 onPrevious={handlePrevious}
                 onNext={handleNext}
                 onProgressUpdate={handleProgressUpdate}
+                onMarkCompleted={() => markCompleted(currentByte.byte_id)}
                 isFullscreen={isFullscreen}
                 onToggleFullscreen={handleToggleFullscreen}
                 autoStart={autoStartVideo}

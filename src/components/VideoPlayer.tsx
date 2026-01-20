@@ -25,6 +25,7 @@ interface VideoPlayerProps {
   onPrevious: () => void;
   onNext: () => void;
   onProgressUpdate: (percentage: number) => void;
+  onMarkCompleted: () => void;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
   autoStart?: boolean; // Auto-start watching when selected from playlist
@@ -47,6 +48,7 @@ export function VideoPlayer({
   onPrevious,
   onNext,
   onProgressUpdate,
+  onMarkCompleted,
   isFullscreen,
   onToggleFullscreen,
   autoStart = false,
@@ -128,16 +130,28 @@ export function VideoPlayer({
     };
   }, [byte.byte_id, isWatching, isTabVisible]);
 
-  // Calculate and update progress based on watch time (completion at >=95% is handled upstream)
+  // Calculate and update progress based on watch time
   useEffect(() => {
-    if (isCompleted || !isWatching || !isTabVisible) return;
+    if (!isWatching || !isTabVisible) return;
 
     const percentage = Math.min((watchTime / ESTIMATED_VIDEO_DURATION) * 100, 100);
 
-    if (percentage > currentProgress) {
+    // Only update progress if not yet completed
+    if (!isCompleted && percentage > currentProgress) {
       onProgressUpdate(percentage);
     }
   }, [watchTime, isCompleted, isWatching, isTabVisible, currentProgress, onProgressUpdate]);
+
+  // Explicitly mark as completed when threshold is reached
+  useEffect(() => {
+    if (isCompleted) return;
+    
+    const percentage = Math.min((watchTime / ESTIMATED_VIDEO_DURATION) * 100, 100);
+    
+    if (percentage >= 95) {
+      onMarkCompleted();
+    }
+  }, [watchTime, isCompleted, onMarkCompleted]);
 
   // Track when a loop completes based on watch time.
   // This MUST keep working even after completion, because auto-advance is based on 3 full loops.
