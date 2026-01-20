@@ -32,20 +32,37 @@ export const TOPIC_DISPLAY_MAP: Record<string, string> = {
   'FUNCTIONS': 'Functions',
 };
 
-// All topic keys in display order
+// Topic keys in alphabetical order (for filter dropdown)
 export const ALL_TOPICS = [
+  'CONDITIONAL_STATEMENTS',
+  'DATA_TYPES',
   'DICTIONARIES',
+  'FUNCTIONS',
   'LISTS',
-  'TUPLES',
+  'LOOPS',
+  'PYTHON_GENERAL',
+  'RECURSION',
   'SETS',
   'STRINGS',
-  'DATA_TYPES',
-  'RECURSION',
-  'LOOPS',
-  'CONDITIONAL_STATEMENTS',
-  'PYTHON_GENERAL',
+  'TUPLES',
   'TYPE_CONVERSION',
+];
+
+// Topic sequence for playlist ordering
+// Data Types -> Type Conversion -> Conditional Statements -> Loops -> Strings -> Lists -> Functions -> Recursion -> Tuples -> Sets -> Dictionaries -> Miscellaneous
+export const TOPIC_SEQUENCE = [
+  'DATA_TYPES',
+  'TYPE_CONVERSION',
+  'CONDITIONAL_STATEMENTS',
+  'LOOPS',
+  'STRINGS',
+  'LISTS',
   'FUNCTIONS',
+  'RECURSION',
+  'TUPLES',
+  'SETS',
+  'DICTIONARIES',
+  'PYTHON_GENERAL',
 ];
 
 export const getTopicDisplayName = (topic: string): string => {
