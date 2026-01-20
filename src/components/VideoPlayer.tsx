@@ -90,7 +90,7 @@ export function VideoPlayer({
     setVideoError(false);
     setUseFallbackIframe(false);
     setIframeWatchTime(0);
-    setIframeIsWatching(false);
+    setIframeIsWatching(true); // Auto-start tracking for iframe fallback
     
     // Clear iframe interval
     if (iframeIntervalRef.current) {
@@ -408,29 +408,6 @@ export function VideoPlayer({
                   />
                 </div>
                 
-                {/* Click overlay for iframe tracking */}
-                {!iframeIsWatching && !isCompleted && (
-                  <motion.button
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    onClick={handleIframeClick}
-                    className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm cursor-pointer group"
-                  >
-                    <motion.div
-                      initial={{ scale: 0.8 }}
-                      animate={{ scale: 1 }}
-                      className="w-20 h-20 rounded-full bg-primary/90 flex items-center justify-center shadow-lg group-hover:bg-primary transition-colors"
-                    >
-                      <Play className="w-10 h-10 text-primary-foreground ml-1" />
-                    </motion.div>
-                    <p className="mt-4 text-white/90 text-sm font-medium">
-                      Click to start tracking
-                    </p>
-                    <p className="mt-1 text-white/60 text-xs">
-                      Progress will be saved automatically
-                    </p>
-                  </motion.button>
-                )}
                 
                 {/* Click blocker for toolbar area */}
                 <div 
