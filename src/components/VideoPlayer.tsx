@@ -447,24 +447,24 @@ export function VideoPlayer({
             ) : (
               /* Iframe Player - Primary method for Google Drive */
               <>
-                {/* Loading skeleton or error state */}
+                {/* Enhanced loading skeleton with video info */}
                 {!iframeLoaded && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-20">
+                  <div className="absolute inset-0 z-20 bg-gradient-to-b from-black via-black/95 to-black">
                     {iframeError ? (
-                      <div className="flex flex-col items-center gap-4 p-6 text-center">
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center">
                         <div className="w-12 h-12 rounded-full bg-destructive/20 flex items-center justify-center">
                           <RotateCcw className="w-6 h-6 text-destructive" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-foreground mb-1">Video failed to load</p>
-                          <p className="text-xs text-muted-foreground">Google Drive may be slow or unavailable</p>
+                          <p className="text-sm font-medium text-white mb-1">Video failed to load</p>
+                          <p className="text-xs text-white/60">Google Drive may be slow or unavailable</p>
                         </div>
                         <div className="flex gap-2">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={handleRetryIframe}
-                            className="rounded-xl gap-2"
+                            className="rounded-xl gap-2 border-white/20 text-white hover:bg-white/10"
                           >
                             <RotateCcw className="w-4 h-4" />
                             Retry
@@ -473,7 +473,7 @@ export function VideoPlayer({
                             variant="ghost"
                             size="sm"
                             asChild
-                            className="rounded-xl"
+                            className="rounded-xl text-white/80 hover:text-white hover:bg-white/10"
                           >
                             <a href={previewUrl} target="_blank" rel="noopener noreferrer">
                               Open in new tab
@@ -482,14 +482,82 @@ export function VideoPlayer({
                         </div>
                       </div>
                     ) : (
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-                        <span className="text-sm text-muted-foreground">Loading video...</span>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center p-6">
+                        {/* Animated background gradient */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10 animate-pulse" />
+                        
+                        {/* Video info skeleton */}
+                        <div className="relative flex flex-col items-center gap-6 max-w-[280px] text-center">
+                          {/* Animated play button skeleton */}
+                          <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ duration: 0.3 }}
+                            className="relative"
+                          >
+                            <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center">
+                              <motion.div
+                                animate={{ scale: [1, 1.1, 1] }}
+                                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                                className="w-16 h-16 rounded-full bg-primary/30 flex items-center justify-center"
+                              >
+                                <Play className="w-8 h-8 text-primary ml-1" />
+                              </motion.div>
+                            </div>
+                            {/* Spinning ring around play button */}
+                            <div className="absolute inset-0 w-20 h-20 border-2 border-primary/30 border-t-primary rounded-full animate-spin" style={{ animationDuration: '1.5s' }} />
+                          </motion.div>
+                          
+                          {/* Video title and topic */}
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
+                            className="space-y-3"
+                          >
+                            <h3 className="text-white font-medium text-lg leading-tight">
+                              {byte.byte_description}
+                            </h3>
+                            <div className="flex flex-wrap justify-center gap-2">
+                              {byte.byte_topics.slice(0, 2).map(topic => (
+                                <span 
+                                  key={topic} 
+                                  className="px-2.5 py-1 rounded-full bg-white/10 text-white/70 text-xs font-medium"
+                                >
+                                  {topic}
+                                </span>
+                              ))}
+                            </div>
+                          </motion.div>
+                          
+                          {/* Loading indicator */}
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.4 }}
+                            className="flex flex-col items-center gap-2"
+                          >
+                            <div className="h-1 w-32 bg-white/10 rounded-full overflow-hidden">
+                              <motion.div 
+                                className="h-full bg-primary rounded-full"
+                                initial={{ width: "0%" }}
+                                animate={{ width: "100%" }}
+                                transition={{ duration: 8, ease: "linear" }}
+                              />
+                            </div>
+                            <span className="text-xs text-white/50">Loading video...</span>
+                          </motion.div>
+                        </div>
                       </div>
                     )}
                   </div>
                 )}
-                <div className="absolute inset-0 overflow-hidden">
+                <motion.div 
+                  className="absolute inset-0 overflow-hidden"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: iframeLoaded ? 1 : 0 }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                >
                   <iframe
                     key={iframeKey}
                     src={previewUrl}
@@ -498,8 +566,6 @@ export function VideoPlayer({
                       objectFit: 'contain',
                       top: '-48px',
                       height: 'calc(100% + 48px)',
-                      opacity: iframeLoaded ? 1 : 0,
-                      transition: 'opacity 0.2s ease-in-out',
                     }}
                     allow="autoplay; encrypted-media"
                     allowFullScreen
@@ -512,7 +578,7 @@ export function VideoPlayer({
                       setIframeIsWatching(true);
                     }}
                   />
-                </div>
+                </motion.div>
                 
                 {/* Click blocker for toolbar area */}
                 <div 
