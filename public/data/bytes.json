@@ -4,174 +4,199 @@
     "byte_url": "https://drive.google.com/file/d/1B8tNS1aGag_cdEx973tGx2uow2VuHaLP/view?usp=sharing",
     "byte_id": "python_byte_1",
     "byte_description": "What are Dictionaries in Python?",
-    "byte_topics": ["DICTIONARIES"]
+    "byte_topics": ["DICTIONARIES"],
+    "duration": 30
   },
   {
     "byte_name": "Python_Byte_2",
     "byte_url": "https://drive.google.com/file/d/1YQAPQwJsAl0SQ7RaXy_zVjuYSDI3bI43/view?usp=sharing",
     "byte_id": "python_byte_2",
     "byte_description": "What is a List in Python?",
-    "byte_topics": ["LISTS"]
+    "byte_topics": ["LISTS"],
+    "duration": 30
   },
   {
     "byte_name": "Python_Byte_3",
     "byte_url": "https://drive.google.com/file/d/1cVVQgACJ24MVOaTtzf5CkFtshlovUc7V/view?usp=sharing",
     "byte_id": "python_byte_3",
     "byte_description": "What is a Tuple?",
-    "byte_topics": ["TUPLES"]
+    "byte_topics": ["TUPLES"],
+    "duration": 30
   },
   {
     "byte_name": "Python_Byte_4",
     "byte_url": "https://drive.google.com/file/d/1EaaUAvkXpXjFa6MhLWqHfEPFCtVPp_Bc/view?usp=sharing",
     "byte_id": "python_byte_4",
     "byte_description": "What is a Set in python?",
-    "byte_topics": ["SETS"]
+    "byte_topics": ["SETS"],
+    "duration": 30
   },
   {
     "byte_name": "Python_Byte_5",
     "byte_url": "https://drive.google.com/file/d/1Ajk8sIUI3Hmg-ow1tUgKShvszt1O3e2s/view?usp=sharing",
     "byte_id": "python_byte_5",
     "byte_description": "What is a String in Python?",
-    "byte_topics": ["STRINGS"]
+    "byte_topics": ["STRINGS"],
+    "duration": 30
   },
   {
     "byte_name": "Python_Byte_6",
     "byte_url": "https://drive.google.com/file/d/16pG96-YkUtlXs8fy3Hx-fkrGq6LKyF2-/view?usp=sharing",
     "byte_id": "python_byte_6",
     "byte_description": "What is negative indexing?",
-    "byte_topics": ["STRINGS"]
+    "byte_topics": ["STRINGS"],
+    "duration": 30
   },
   {
     "byte_name": "Python_Byte_7",
     "byte_url": "https://drive.google.com/file/d/1VJeNJGNpRfP4M4vK04hEtGGphM-SSj9A/view?usp=sharing",
     "byte_id": "python_byte_7",
     "byte_description": "Differences between Lists and Tuples Python",
-    "byte_topics": ["LISTS", "TUPLES"]
+    "byte_topics": ["LISTS", "TUPLES"],
+    "duration": 30
   },
   {
     "byte_name": "Python_Byte_8",
     "byte_url": "https://drive.google.com/file/d/1ARQzKn_XgvhemIT1115YW9a5xVo2l3Cf/view?usp=sharing",
     "byte_id": "python_byte_8",
     "byte_description": "What are Objects in Python?",
-    "byte_topics": ["DATA_TYPES"]
+    "byte_topics": ["DATA_TYPES"],
+    "duration": 30
   },
   {
     "byte_name": "Python_Byte_9",
     "byte_url": "https://drive.google.com/file/d/1fJKAflZsEk9u_XdZnQZfOLIlObNQoVjR/view?usp=sharing",
     "byte_id": "python_byte_9",
     "byte_description": "What is Recursion?",
-    "byte_topics": ["RECURSION"]
+    "byte_topics": ["RECURSION"],
+    "duration": 30
   },
   {
     "byte_name": "Python_Byte_10",
     "byte_url": "https://drive.google.com/file/d/1EGXXEQoDKRw1XKFBmBS-3aSq7IQYxv9z/view?usp=sharing",
     "byte_id": "python_byte_10",
     "byte_description": "List Methods in Python",
-    "byte_topics": ["LISTS"]
+    "byte_topics": ["LISTS"],
+    "duration": 30
   },
   {
     "byte_name": "Python_Byte_11",
     "byte_url": "https://drive.google.com/file/d/1AHMvSX8Cw4ypEjPDWeVc1BHFrrWvswAG/view?usp=sharing",
     "byte_id": "python_byte_11",
     "byte_description": "Data types in Python",
-    "byte_topics": ["DATA_TYPES"]
+    "byte_topics": ["DATA_TYPES"],
+    "duration": 30
   },
   {
     "byte_name": "Python_Byte_12",
     "byte_url": "https://drive.google.com/file/d/1pP31zQ0LDZpO-E1dK9XzOHwUOPxip0n9/view?usp=sharing",
     "byte_id": "python_byte_12",
     "byte_description": "Why do we need For loop?",
-    "byte_topics": ["LOOPS"]
+    "byte_topics": ["LOOPS"],
+    "duration": 30
   },
   {
     "byte_name": "Python_Byte_13",
     "byte_url": "https://drive.google.com/file/d/1mTSZ3W3zGxAJHm5jXsgUseicpRSKnAwe/view?usp=sharing",
     "byte_id": "python_byte_13",
     "byte_description": "What are Loops?",
-    "byte_topics": ["LOOPS"]
+    "byte_topics": ["LOOPS"],
+    "duration": 30
   },
   {
     "byte_name": "Python_Byte_14",
     "byte_url": "https://drive.google.com/file/d/1FouYwvB31gRF6YMGxEnyhQe0Z6cnfONc/view?usp=sharing",
     "byte_id": "python_byte_14",
     "byte_description": "Do you know about the conditional statements in Python?",
-    "byte_topics": ["CONDITIONAL_STATEMENTS"]
+    "byte_topics": ["CONDITIONAL_STATEMENTS"],
+    "duration": 30
   },
   {
     "byte_name": "Python_Byte_15",
     "byte_url": "https://drive.google.com/file/d/1JVxhlERgHdBS35a93Q0TjFf6X28cvCMr/view?usp=sharing",
     "byte_id": "python_byte_15",
     "byte_description": "What are data structures in python?",
-    "byte_topics": ["DATA_TYPES"]
+    "byte_topics": ["DATA_TYPES"],
+    "duration": 30
   },
   {
     "byte_name": "Python_Byte_16",
     "byte_url": "https://drive.google.com/file/d/1XC-8Yfpnids-bVlI2MAIN6dwYNi4pbwi/view?usp=sharing",
     "byte_id": "python_byte_16",
     "byte_description": "Is Python Case-sensitive?",
-    "byte_topics": ["PYTHON_GENERAL"]
+    "byte_topics": ["PYTHON_GENERAL"],
+    "duration": 30
   },
   {
     "byte_name": "Python_Byte_17",
     "byte_url": "https://drive.google.com/file/d/1Hte3Gz_DHEK9c7-nlXVXQLAaxDeTGUw0/view?usp=sharing",
     "byte_id": "python_byte_17",
     "byte_description": "What is Software?",
-    "byte_topics": ["PYTHON_GENERAL"]
+    "byte_topics": ["PYTHON_GENERAL"],
+    "duration": 30
   },
   {
     "byte_name": "Python_Byte_18",
     "byte_url": "https://drive.google.com/file/d/1N6EjVqCT7J5dXf9KCdYPn7-6jc6XCccH/view?usp=sharing",
     "byte_id": "python_byte_18",
     "byte_description": "How do you reverse a list in python?",
-    "byte_topics": ["LISTS"]
+    "byte_topics": ["LISTS"],
+    "duration": 30
   },
   {
     "byte_name": "Python_Byte_19",
     "byte_url": "https://drive.google.com/file/d/1fH6TVbN2o8A0bys3op6OosJir71aAEut/view?usp=sharing",
     "byte_id": "python_byte_19",
     "byte_description": "Do you think python is a dynamically typed programming language?",
-    "byte_topics": ["PYTHON_GENERAL"]
+    "byte_topics": ["PYTHON_GENERAL"],
+    "duration": 30
   },
   {
     "byte_name": "Python_Byte_20",
     "byte_url": "https://drive.google.com/file/d/1Mg79edu0GBLFTanIs5xUTMX09-zjgNFi/view?usp=sharing",
     "byte_id": "python_byte_20",
     "byte_description": "What is type conversion in python?",
-    "byte_topics": ["TYPE_CONVERSION"]
+    "byte_topics": ["TYPE_CONVERSION"],
+    "duration": 30
   },
   {
     "byte_name": "Python_Byte_21",
     "byte_url": "https://drive.google.com/file/d/10DX43c1XNa8VQMdnruZsrB6QG_-FcUtR/view?usp=sharing",
     "byte_id": "python_byte_21",
     "byte_description": "What are some of numeric data types in python?",
-    "byte_topics": ["DATA_TYPES"]
+    "byte_topics": ["DATA_TYPES"],
+    "duration": 30
   },
   {
     "byte_name": "Python_Byte_22",
     "byte_url": "https://drive.google.com/file/d/1prOeK5VV4Bxeh_rS_EOMem2B3nFfWDaB/view?usp=sharing",
     "byte_id": "python_byte_22",
     "byte_description": "What is Scope in python?",
-    "byte_topics": ["PYTHON_GENERAL"]
+    "byte_topics": ["PYTHON_GENERAL"],
+    "duration": 30
   },
   {
     "byte_name": "Python_Byte_23",
     "byte_url": "https://drive.google.com/file/d/1-BrjkcNJNx0-qh2gX4-WP97WuHrG4ZzV/view?usp=sharing",
     "byte_id": "python_byte_23",
     "byte_description": "What is the use of while loop in python?",
-    "byte_topics": ["LOOPS"]
+    "byte_topics": ["LOOPS"],
+    "duration": 30
   },
   {
     "byte_name": "Python_Byte_24",
     "byte_url": "https://drive.google.com/file/d/1FAoUqr0O1yrRtYSDVGjZYCFjoxQErYNX/view?usp=sharing",
     "byte_id": "python_byte_24",
     "byte_description": "What are functions in python?",
-    "byte_topics": ["FUNCTIONS"]
+    "byte_topics": ["FUNCTIONS"],
+    "duration": 30
   },
   {
     "byte_name": "Python_Byte_25",
     "byte_url": "https://drive.google.com/file/d/1yC_6CnueHuSbS72nVOW40ruuVRL8vwbj/view?usp=sharing",
     "byte_id": "python_byte_25",
     "byte_description": "Are tuples mutable in python?",
-    "byte_topics": ["TUPLES"]
+    "byte_topics": ["TUPLES"],
+    "duration": 30
   }
 ]
