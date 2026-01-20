@@ -175,34 +175,8 @@ export function VideoPlayer({
   };
 
   const handleToggleFullscreen = useCallback(() => {
-    if (!containerRef.current) {
-      onToggleFullscreen();
-      return;
-    }
-
-    if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().catch(() => {
-        onToggleFullscreen();
-      });
-    } else {
-      document.exitFullscreen().catch(() => {
-        onToggleFullscreen();
-      });
-    }
+    onToggleFullscreen();
   }, [onToggleFullscreen]);
-
-  // Listen for fullscreen changes
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      const isNowFullscreen = !!document.fullscreenElement;
-      if (isNowFullscreen !== isFullscreen) {
-        onToggleFullscreen();
-      }
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, [isFullscreen, onToggleFullscreen]);
 
   const handlePlayNext = useCallback(() => {
     if (nextByte) {
@@ -280,8 +254,8 @@ export function VideoPlayer({
           <div 
             className="relative bg-black rounded-xl overflow-hidden no-context-menu"
             style={{
-              maxHeight: '70vh',
-              maxWidth: '420px',
+              maxHeight: isFullscreen ? '90vh' : '70vh',
+              maxWidth: isFullscreen ? '500px' : '420px',
               width: '100%',
               aspectRatio: '9/16',
             }}
