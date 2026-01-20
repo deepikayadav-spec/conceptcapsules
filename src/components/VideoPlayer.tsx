@@ -66,10 +66,7 @@ export function VideoPlayer({
   const [useFallbackIframe, setUseFallbackIframe] = useState(true);
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [videoError, setVideoError] = useState(false);
-  const [loadingTimedOut, setLoadingTimedOut] = useState(false);
-  const [iframeKey, setIframeKey] = useState(0);
   const didMarkCompletedRef = useRef(false);
-  const loadingTimeoutRef = useRef<number | null>(null);
   
   // For iframe fallback - simulated tracking
   const [iframeWatchTime, setIframeWatchTime] = useState(0);
@@ -78,7 +75,6 @@ export function VideoPlayer({
   const [isTabVisible, setIsTabVisible] = useState(true);
   
   const ESTIMATED_VIDEO_DURATION = 60; // For iframe fallback
-  const LOADING_TIMEOUT_MS = 8000; // 8 seconds before showing reload option
 
   // Track tab visibility
   useEffect(() => {
@@ -97,16 +93,10 @@ export function VideoPlayer({
     setVideoError(false);
     setUseFallbackIframe(true); // Always use iframe for Google Drive
     setIframeLoaded(false);
-    setLoadingTimedOut(false);
-    setIframeKey(prev => prev + 1);
     setIframeWatchTime(0);
     setIframeIsWatching(true); // Auto-start tracking for iframe
     
-    // Clear timeouts/intervals
-    if (loadingTimeoutRef.current) {
-      clearTimeout(loadingTimeoutRef.current);
-      loadingTimeoutRef.current = null;
-    }
+    // Clear iframe interval
     if (iframeIntervalRef.current) {
       clearInterval(iframeIntervalRef.current);
       iframeIntervalRef.current = null;
@@ -118,39 +108,6 @@ export function VideoPlayer({
       videoRef.current.pause();
     }
   }, [byte.byte_id]);
-
-  // Loading timeout - show reload option if iframe takes too long
-  useEffect(() => {
-    if (useFallbackIframe && !iframeLoaded) {
-      loadingTimeoutRef.current = window.setTimeout(() => {
-        setLoadingTimedOut(true);
-      }, LOADING_TIMEOUT_MS);
-    }
-    
-    return () => {
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-        loadingTimeoutRef.current = null;
-      }
-    };
-  }, [useFallbackIframe, iframeLoaded, iframeKey]);
-
-  // Handle iframe load success
-  const handleIframeLoad = useCallback(() => {
-    setIframeLoaded(true);
-    setLoadingTimedOut(false);
-    if (loadingTimeoutRef.current) {
-      clearTimeout(loadingTimeoutRef.current);
-      loadingTimeoutRef.current = null;
-    }
-  }, []);
-
-  // Reload iframe
-  const handleReloadVideo = useCallback(() => {
-    setIframeLoaded(false);
-    setLoadingTimedOut(false);
-    setIframeKey(prev => prev + 1);
-  }, []);
 
   // Handle video time updates - ONLY updates progress when video is actually playing
   const handleTimeUpdate = useCallback(() => {
@@ -291,8 +248,7 @@ export function VideoPlayer({
 
   // Get video URLs
   const directUrl = driveUrlToDirect(byte.byte_url);
-  const previewUrl = driveUrlToPreview(byte.byte_url, true); // With autoplay
-  const nextPreviewUrl = nextByte ? driveUrlToPreview(nextByte.byte_url, false) : null; // No autoplay for preload
+  const previewUrl = driveUrlToPreview(byte.byte_url);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -441,47 +397,30 @@ export function VideoPlayer({
             ) : (
               /* Iframe Player - Primary method for Google Drive */
               <>
-                {/* Loading overlay with timeout handling */}
+                {/* Loading skeleton */}
                 {!iframeLoaded && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-20">
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/80">
                     <div className="flex flex-col items-center gap-3">
-                      {!loadingTimedOut ? (
-                        <>
-                          <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-                          <span className="text-sm text-muted-foreground">Loading video...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="text-sm text-muted-foreground mb-2">Still loading...</span>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={handleReloadVideo}
-                            className="gap-2"
-                          >
-                            <RotateCcw className="w-4 h-4" />
-                            Reload video
-                          </Button>
-                        </>
-                      )}
+                      <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+                      <span className="text-sm text-muted-foreground">Loading video...</span>
                     </div>
                   </div>
                 )}
                 <div className="absolute inset-0 overflow-hidden">
                   <iframe
-                    key={`${byte.byte_id}-${iframeKey}`}
                     src={previewUrl}
                     className="absolute w-full"
                     style={{ 
                       objectFit: 'contain',
                       top: '-48px',
                       height: 'calc(100% + 48px)',
+                      opacity: iframeLoaded ? 1 : 0,
+                      transition: 'opacity 0.2s ease-in-out',
                     }}
-                    allow="autoplay; encrypted-media; accelerometer; gyroscope"
+                    allow="autoplay; encrypted-media"
                     allowFullScreen
-                    loading="eager"
                     title={byte.byte_description}
-                    onLoad={handleIframeLoad}
+                    onLoad={() => setIframeLoaded(true)}
                   />
                 </div>
                 
@@ -555,25 +494,6 @@ export function VideoPlayer({
         isOpen={notesOpen}
         onClose={() => setNotesOpen(false)}
       />
-
-      {/* Preload next video iframe (hidden) - only after current video loads */}
-      {nextPreviewUrl && iframeLoaded && (
-        <iframe
-          src={nextPreviewUrl}
-          className="sr-only"
-          style={{ 
-            position: 'absolute',
-            width: 1,
-            height: 1,
-            opacity: 0,
-            pointerEvents: 'none',
-          }}
-          aria-hidden="true"
-          tabIndex={-1}
-          loading="eager"
-          title="Preloading next video"
-        />
-      )}
     </>
   );
 }
