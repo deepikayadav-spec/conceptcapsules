@@ -47,19 +47,28 @@ export function useVideoProgress() {
     setProgress(prev => {
       const existing = prev[byteId];
       
-      // Don't decrease progress (no rewinding effects)
-      if (existing && existing.percentage > clampedPercentage && !existing.isCompleted) {
+      // If already completed, lock to 100% - never allow regression
+      if (existing?.isCompleted) {
         return prev;
       }
+      
+      // Don't decrease progress (no rewinding effects)
+      if (existing && existing.percentage > clampedPercentage) {
+        return prev;
+      }
+
+      // If reaching completion threshold, lock to 100%
+      const isNowCompleted = clampedPercentage >= 95;
+      const finalPercentage = isNowCompleted ? 100 : clampedPercentage;
 
       const newProgress = {
         ...prev,
         [byteId]: {
           watchedSeconds: 0,
           duration: 0,
-          percentage: clampedPercentage,
+          percentage: finalPercentage,
           lastWatched: Date.now(),
-          isCompleted: existing?.isCompleted || clampedPercentage >= 95,
+          isCompleted: isNowCompleted,
         },
       };
       

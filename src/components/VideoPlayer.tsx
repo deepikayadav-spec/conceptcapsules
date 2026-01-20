@@ -54,12 +54,14 @@ export function VideoPlayer({
   autoStart = false,
 }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isWatching, setIsWatching] = useState(autoStart);
+  const [hasUserEngaged, setHasUserEngaged] = useState(false);
+  const [isWatching, setIsWatching] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [watchTime, setWatchTime] = useState(0);
   const [loopCount, setLoopCount] = useState(0);
   const [isTabVisible, setIsTabVisible] = useState(true);
   const progressIntervalRef = useRef<number | null>(null);
+  const didMarkCompletedRef = useRef(false);
 
   // Track tab visibility to pause progress when tab is hidden
   useEffect(() => {
@@ -72,16 +74,20 @@ export function VideoPlayer({
 
   // Handle click on video area to start watching
   const handleVideoAreaClick = useCallback(() => {
+    if (!hasUserEngaged) {
+      setHasUserEngaged(true);
+    }
     if (!isWatching) {
       setIsWatching(true);
     }
-  }, [isWatching]);
+  }, [hasUserEngaged, isWatching]);
 
   // Reset watch time/loop count when byte changes
   useEffect(() => {
     setWatchTime(0);
     setLoopCount(0);
-    setIsWatching(false); // Reset watching state on video change
+    setIsWatching(false);
+    didMarkCompletedRef.current = false;
 
     // Clear previous interval
     if (progressIntervalRef.current) {
@@ -90,17 +96,17 @@ export function VideoPlayer({
     }
   }, [byte.byte_id]);
 
-  // Auto-start watching when autoStart prop is true (triggered by playlist click or navigation)
-  // Runs when byte changes with autoStart, or when autoStart becomes true
+  // Auto-start watching when autoStart prop is true AND user has engaged at least once
+  // This prevents progress from moving before the user clicks the video area
   useEffect(() => {
-    if (autoStart) {
+    if (autoStart && hasUserEngaged) {
       // Small delay to ensure the reset effect runs first
       const timer = setTimeout(() => {
         setIsWatching(true);
       }, 50);
       return () => clearTimeout(timer);
     }
-  }, [autoStart, byte.byte_id]);
+  }, [autoStart, byte.byte_id, hasUserEngaged]);
 
   // Simulate progress tracking (since we can't access iframe video events)
   // Assume average video is ~60 seconds for progress calculation
@@ -142,13 +148,14 @@ export function VideoPlayer({
     }
   }, [watchTime, isCompleted, isWatching, isTabVisible, currentProgress, onProgressUpdate]);
 
-  // Explicitly mark as completed when threshold is reached
+  // Explicitly mark as completed when threshold is reached (exactly once per byte)
   useEffect(() => {
-    if (isCompleted) return;
+    if (isCompleted || didMarkCompletedRef.current) return;
     
     const percentage = Math.min((watchTime / ESTIMATED_VIDEO_DURATION) * 100, 100);
     
     if (percentage >= 95) {
+      didMarkCompletedRef.current = true;
       onMarkCompleted();
     }
   }, [watchTime, isCompleted, onMarkCompleted]);
