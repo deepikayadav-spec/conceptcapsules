@@ -272,26 +272,26 @@ export function VideoPlayer({
         <div className="flex items-start justify-between mb-4 shrink-0">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              <span className={`font-medium text-muted-foreground uppercase tracking-wide ${isFullscreen ? 'text-sm' : 'text-xs'}`}>
                 Byte {byteNumber} of {totalBytes}
               </span>
               {isCompleted && (
                 <motion.span
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="flex items-center gap-1 text-xs font-medium text-primary"
+                  className={`flex items-center gap-1 font-medium text-primary ${isFullscreen ? 'text-sm' : 'text-xs'}`}
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <CheckCircle2 className={isFullscreen ? 'w-4 h-4' : 'w-3.5 h-3.5'} />
                   Completed
                 </motion.span>
               )}
             </div>
-            <h2 className="text-xl lg:text-2xl font-display font-bold text-foreground truncate">
+            <h2 className={`font-display font-bold text-foreground truncate ${isFullscreen ? 'text-2xl lg:text-3xl' : 'text-xl lg:text-2xl'}`}>
               {byte.byte_description}
             </h2>
             <div className="flex flex-wrap gap-2 mt-3">
               {byte.byte_topics.map(topic => (
-                <TopicBadge key={topic} topic={topic} />
+                <TopicBadge key={topic} topic={topic} size={isFullscreen ? 'md' : 'sm'} />
               ))}
             </div>
           </div>
@@ -434,8 +434,8 @@ export function VideoPlayer({
                   <SkipForward className="w-5 h-5 text-secondary-foreground" />
                 </div>
                 <div className="min-w-0 text-left">
-                  <p className="text-xs text-muted-foreground font-medium">Up Next</p>
-                  <p className="text-sm font-semibold text-foreground truncate max-w-[160px]">
+                  <p className={`text-muted-foreground font-medium ${isFullscreen ? 'text-sm' : 'text-xs'}`}>Up Next</p>
+                  <p className={`font-semibold text-foreground truncate max-w-[160px] ${isFullscreen ? 'text-base' : 'text-sm'}`}>
                     {nextByte.byte_description}
                   </p>
                   <div className="flex gap-1 mt-1">
@@ -455,9 +455,9 @@ export function VideoPlayer({
             variant="outline"
             onClick={onPrevious}
             disabled={byteNumber === 1}
-            className="rounded-xl gap-2"
+            className={`rounded-xl gap-2 ${isFullscreen ? 'text-base px-5 py-2.5' : ''}`}
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className={isFullscreen ? 'w-5 h-5' : 'w-4 h-4'} />
             <span className="hidden sm:inline">Previous</span>
           </Button>
 
@@ -465,10 +465,10 @@ export function VideoPlayer({
             variant="outline"
             onClick={onNext}
             disabled={byteNumber === totalBytes}
-            className="rounded-xl gap-2"
+            className={`rounded-xl gap-2 ${isFullscreen ? 'text-base px-5 py-2.5' : ''}`}
           >
             <span className="hidden sm:inline">Next</span>
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className={isFullscreen ? 'w-5 h-5' : 'w-4 h-4'} />
           </Button>
         </div>
 
