@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Play, Zap, BookOpen, Sparkles, ArrowRight, Pill } from 'lucide-react';
+import { Play, Zap, BookOpen, ArrowRight, Pill } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
@@ -14,11 +14,6 @@ const benefits = [
     icon: BookOpen,
     title: 'Revision-First',
     description: 'Designed for quick revision before exams or interviews. Perfect recall.',
-  },
-  {
-    icon: Sparkles,
-    title: 'Ask AI Anytime',
-    description: 'Stuck on a concept? Chat with Capsule AI for instant explanations.',
   },
 ];
 
@@ -108,7 +103,7 @@ export default function Home() {
           initial={{ y: 40, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.6, duration: 0.5 }}
-          className="mt-24 grid md:grid-cols-3 gap-6 max-w-5xl mx-auto"
+          className="mt-24 grid md:grid-cols-2 gap-6 max-w-3xl mx-auto"
         >
           {benefits.map((benefit, index) => (
             <motion.div
