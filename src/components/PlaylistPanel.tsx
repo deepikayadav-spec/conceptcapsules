@@ -240,7 +240,10 @@ export function PlaylistPanel({
       </ScrollArea>
 
       {/* Footer */}
-      <div className="p-3 border-t border-border/50">
+      <div className="p-3 border-t border-border/50 space-y-2">
+        <p className="text-xs text-center text-muted-foreground/70">
+          ☕ More capsules brewing! We add new content regularly.
+        </p>
         <p className="text-xs text-center text-muted-foreground">
           <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px]">L</kbd> to toggle
         </p>
