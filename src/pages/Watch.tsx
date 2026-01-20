@@ -38,6 +38,7 @@ export default function Watch() {
     markCompleted,
     getCompletedVideos,
     getCompletedCount,
+    resetAllProgress,
   } = useVideoProgress();
 
   const completedVideos = getCompletedVideos();
@@ -170,6 +171,7 @@ export default function Watch() {
         showProgress
         completed={completedCount}
         total={bytes.length}
+        onResetProgress={resetAllProgress}
       />
 
       {/* Main Content */}

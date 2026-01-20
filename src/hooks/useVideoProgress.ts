@@ -17,12 +17,41 @@ interface VideoProgress {
 export function useVideoProgress() {
   const [progress, setProgress] = useState<VideoProgress>({});
 
-  // Load progress from localStorage on mount
+  // Load and normalize progress from localStorage on mount
   useEffect(() => {
     try {
       const stored = localStorage.getItem(PROGRESS_STORAGE_KEY);
       if (stored) {
-        setProgress(JSON.parse(stored));
+        const parsed: VideoProgress = JSON.parse(stored);
+        
+        // Normalize legacy data: ensure completed items have 100% and fix inconsistencies
+        let needsUpdate = false;
+        const normalized = Object.entries(parsed).reduce((acc, [byteId, data]) => {
+          let updatedData = { ...data };
+          
+          // If marked completed but percentage isn't 100, fix it
+          if (data.isCompleted && data.percentage !== 100) {
+            updatedData.percentage = 100;
+            needsUpdate = true;
+          }
+          
+          // If percentage >= 95 but not marked completed, mark it
+          if (data.percentage >= 95 && !data.isCompleted) {
+            updatedData.isCompleted = true;
+            updatedData.percentage = 100;
+            needsUpdate = true;
+          }
+          
+          acc[byteId] = updatedData;
+          return acc;
+        }, {} as VideoProgress);
+        
+        setProgress(normalized);
+        
+        // Save normalized data back if we made changes
+        if (needsUpdate) {
+          localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(normalized));
+        }
       }
     } catch (error) {
       console.error('Error loading progress:', error);
@@ -47,9 +76,18 @@ export function useVideoProgress() {
     setProgress(prev => {
       const existing = prev[byteId];
       
-      // If already completed, lock to 100% - never allow regression
+      // If already completed, ensure it stays at 100% (repair if needed)
       if (existing?.isCompleted) {
-        return prev;
+        if (existing.percentage !== 100) {
+          // Repair inconsistent state
+          const repairedProgress = {
+            ...prev,
+            [byteId]: { ...existing, percentage: 100 },
+          };
+          saveProgress(repairedProgress);
+          return repairedProgress;
+        }
+        return prev; // Already correct, no change needed
       }
       
       // Don't decrease progress (no rewinding effects)
@@ -134,6 +172,27 @@ export function useVideoProgress() {
     return data.percentage >= 95;
   }, [progress]);
 
+  // Reset all progress (clear localStorage and state)
+  const resetAllProgress = useCallback(() => {
+    try {
+      localStorage.removeItem(PROGRESS_STORAGE_KEY);
+      setProgress({});
+    } catch (error) {
+      console.error('Error resetting progress:', error);
+    }
+  }, []);
+
+  // Reset progress for a single video
+  const resetVideoProgress = useCallback((byteId: string) => {
+    if (!byteId) return;
+    
+    setProgress(prev => {
+      const { [byteId]: removed, ...rest } = prev;
+      saveProgress(rest);
+      return rest;
+    });
+  }, [saveProgress]);
+
   return {
     progress,
     updateProgress,
@@ -143,5 +202,7 @@ export function useVideoProgress() {
     getCompletedVideos,
     getCompletedCount,
     shouldAutoComplete,
+    resetAllProgress,
+    resetVideoProgress,
   };
 }
