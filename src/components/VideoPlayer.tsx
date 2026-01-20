@@ -190,7 +190,7 @@ export function VideoPlayer({
       <motion.div
         ref={containerRef}
         layout
-        className={`flex flex-col h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-background p-6' : ''}`}
+        className="flex flex-col h-full"
       >
         {/* Header */}
         <div className="flex items-start justify-between mb-4 shrink-0">

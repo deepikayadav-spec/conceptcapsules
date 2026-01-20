@@ -161,76 +161,57 @@ export default function Watch() {
 
       {/* Main Content */}
       <div className="flex-1 min-h-0">
-        {isFullscreen ? (
-          <div className="h-full p-4 lg:p-6">
-            <VideoPlayer
-              byte={currentByte}
-              byteNumber={currentIndex + 1}
-              totalBytes={bytes.length}
-              isCompleted={completedVideos.includes(currentByte.byte_id)}
-              currentProgress={currentProgress}
-              nextByte={currentIndex < bytes.length - 1 ? bytes[currentIndex + 1] : null}
-              onPrevious={handlePrevious}
-              onNext={handleNext}
-              onProgressUpdate={handleProgressUpdate}
-              isFullscreen={isFullscreen}
-              onToggleFullscreen={handleToggleFullscreen}
-              autoStart={autoStartVideo}
-            />
-          </div>
-        ) : (
-          <ResizablePanelGroup
-            direction="horizontal"
-            onLayout={handlePanelResize}
-            className="h-full"
-          >
-            {/* Left Panel - Playlist */}
-            {state.leftPanelOpen && (
-              <>
-                <ResizablePanel
-                  defaultSize={state.leftPanelSize || 25}
-                  minSize={15}
-                  maxSize={40}
-                  className="min-w-[200px]"
-                >
-                  <PlaylistPanel
-                    bytes={bytes}
-                    currentByteId={currentByte.byte_id}
-                    completedVideos={completedVideos}
-                    isOpen={state.leftPanelOpen}
-                    onToggle={handleToggleLeftPanel}
-                    onSelectByte={handleSelectByte}
-                    getProgress={getProgress}
-                  />
-                </ResizablePanel>
-                <ResizableHandle withHandle className="bg-border/50 hover:bg-primary/20 transition-colors" />
-              </>
-            )}
-
-            {/* Center - Video Player */}
-            <ResizablePanel defaultSize={state.leftPanelOpen ? (100 - (state.leftPanelSize || 25)) : 100}>
-              <motion.div
-                layout
-                className="h-full p-4 lg:p-6"
+        <ResizablePanelGroup
+          direction="horizontal"
+          onLayout={handlePanelResize}
+          className="h-full"
+        >
+          {/* Left Panel - Playlist */}
+          {state.leftPanelOpen && (
+            <>
+              <ResizablePanel
+                defaultSize={state.leftPanelSize || 25}
+                minSize={15}
+                maxSize={40}
+                className="min-w-[200px]"
               >
-                <VideoPlayer
-                  byte={currentByte}
-                  byteNumber={currentIndex + 1}
-                  totalBytes={bytes.length}
-                  isCompleted={completedVideos.includes(currentByte.byte_id)}
-                  currentProgress={currentProgress}
-                  nextByte={currentIndex < bytes.length - 1 ? bytes[currentIndex + 1] : null}
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
-                  onProgressUpdate={handleProgressUpdate}
-                  isFullscreen={isFullscreen}
-                  onToggleFullscreen={handleToggleFullscreen}
-                  autoStart={autoStartVideo}
+                <PlaylistPanel
+                  bytes={bytes}
+                  currentByteId={currentByte.byte_id}
+                  completedVideos={completedVideos}
+                  isOpen={state.leftPanelOpen}
+                  onToggle={handleToggleLeftPanel}
+                  onSelectByte={handleSelectByte}
+                  getProgress={getProgress}
                 />
-              </motion.div>
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        )}
+              </ResizablePanel>
+              <ResizableHandle withHandle className="bg-border/50 hover:bg-primary/20 transition-colors" />
+            </>
+          )}
+
+          {/* Center - Video Player */}
+          <ResizablePanel defaultSize={state.leftPanelOpen ? (100 - (state.leftPanelSize || 25)) : 100}>
+            <motion.div
+              layout
+              className="h-full p-4 lg:p-6"
+            >
+              <VideoPlayer
+                byte={currentByte}
+                byteNumber={currentIndex + 1}
+                totalBytes={bytes.length}
+                isCompleted={completedVideos.includes(currentByte.byte_id)}
+                currentProgress={currentProgress}
+                nextByte={currentIndex < bytes.length - 1 ? bytes[currentIndex + 1] : null}
+                onPrevious={handlePrevious}
+                onNext={handleNext}
+                onProgressUpdate={handleProgressUpdate}
+                isFullscreen={isFullscreen}
+                onToggleFullscreen={handleToggleFullscreen}
+                autoStart={autoStartVideo}
+              />
+            </motion.div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
 
         {/* Collapsed panel toggle button */}
         {!isFullscreen && !state.leftPanelOpen && (
