@@ -31,13 +31,14 @@ export function driveUrlToDirect(url: string): string {
 
 /**
  * Convert Google Drive URL to preview embed URL
- * Used as fallback when direct download doesn't work
+ * Uses export=view format which tends to load faster than /preview
  */
 export function driveUrlToPreview(url: string): string {
   const id = extractDriveFileId(url);
   if (!id) return url;
   
-  return `https://drive.google.com/file/d/${id}/preview`;
+  // Use export=view format - tends to load faster and starts video immediately
+  return `https://drive.google.com/file/d/${id}/preview?autoplay=1`;
 }
 
 /**
