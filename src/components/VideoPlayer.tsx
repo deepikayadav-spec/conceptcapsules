@@ -34,6 +34,7 @@ interface VideoPlayerProps {
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
   autoStart?: boolean;
+  requireCompletionForNext?: boolean; // When true, Next button disabled until video ends
 }
 
 /**
@@ -56,6 +57,7 @@ export function VideoPlayer({
   isFullscreen,
   onToggleFullscreen,
   autoStart = false,
+  requireCompletionForNext = true,
 }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -72,6 +74,9 @@ export function VideoPlayer({
   const didMarkCompletedRef = useRef(false);
   const iframeTimeoutRef = useRef<number | null>(null);
   
+  // Track if video has been watched to completion THIS session (not persisted)
+  const [videoEndedThisSession, setVideoEndedThisSession] = useState(false);
+  
   // For iframe fallback - simulated tracking
   const [iframeWatchTime, setIframeWatchTime] = useState(0);
   const [iframeIsWatching, setIframeIsWatching] = useState(false);
@@ -80,6 +85,10 @@ export function VideoPlayer({
   
   const ESTIMATED_VIDEO_DURATION = 60; // For iframe fallback
   const IFRAME_LOAD_TIMEOUT = 10000; // 10 seconds
+  
+  // Determine if Next button should be enabled
+  // Video is considered "watched" if: already completed previously OR ended this session
+  const canProceedToNext = isCompleted || videoEndedThisSession || !requireCompletionForNext;
 
   // Track tab visibility
   useEffect(() => {
@@ -101,7 +110,8 @@ export function VideoPlayer({
     setIframeError(false);
     setIframeKey(prev => prev + 1);
     setIframeWatchTime(0);
-    setIframeIsWatching(true); // Auto-start tracking for iframe
+    setIframeIsWatching(false); // Don't auto-start - wait for iframe load
+    setVideoEndedThisSession(false); // Reset session completion flag
     
     // Clear any existing timeout
     if (iframeTimeoutRef.current) {
@@ -276,14 +286,18 @@ export function VideoPlayer({
       onProgressUpdate(percentage);
     }
     
-    // Mark completed at 95%
-    if (percentage >= 95 && !isCompleted && !didMarkCompletedRef.current) {
+    // Mark completed at 95% or when duration reached
+    if (percentage >= 95 && !didMarkCompletedRef.current) {
       didMarkCompletedRef.current = true;
-      onMarkCompleted();
+      setVideoEndedThisSession(true); // Enable Next button
+      if (!isCompleted) {
+        onMarkCompleted();
+      }
     }
     
-    // Handle loop for iframe
+    // Handle loop for iframe (video "ended")
     if (iframeWatchTime >= ESTIMATED_VIDEO_DURATION) {
+      setVideoEndedThisSession(true); // Video completed a full loop
       setLoopCount(prev => prev + 1);
       setIframeWatchTime(0);
     }
@@ -501,6 +515,8 @@ export function VideoPlayer({
                     onLoad={() => {
                       setIframeLoaded(true);
                       setIframeError(false);
+                      // Start tracking only after iframe loads
+                      setIframeIsWatching(true);
                     }}
                   />
                 </div>
@@ -566,12 +582,16 @@ export function VideoPlayer({
           </Button>
 
           <Button
-            variant="outline"
+            variant={canProceedToNext ? "outline" : "ghost"}
             onClick={onNext}
-            disabled={byteNumber === totalBytes}
-            className={`rounded-xl gap-2 ${isFullscreen ? 'text-base px-5 py-2.5' : ''}`}
+            disabled={byteNumber === totalBytes || !canProceedToNext}
+            className={`rounded-xl gap-2 ${isFullscreen ? 'text-base px-5 py-2.5' : ''} ${
+              !canProceedToNext ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+            title={!canProceedToNext ? 'Watch the video to unlock' : 'Go to next video'}
           >
-            <span className="hidden sm:inline">Next</span>
+            <span className="hidden sm:inline">{canProceedToNext ? 'Next' : 'Watch to unlock'}</span>
+            <span className="sm:hidden">{canProceedToNext ? '' : '🔒'}</span>
             <ChevronRight className={isFullscreen ? 'w-5 h-5' : 'w-4 h-4'} />
           </Button>
         </div>
