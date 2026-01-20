@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { TopicBadge } from '@/components/TopicBadge';
 import { Byte } from '@/types/byte';
 import { NotesModal } from '@/components/NotesModal';
+import { VideoActions } from '@/components/VideoActions';
 
 interface VideoPlayerProps {
   byte: Byte;
@@ -310,6 +311,9 @@ export function VideoPlayer({
               style={{ borderTopRightRadius: '12px' }}
             />
           </div>
+
+          {/* Video Actions - Like & Feedback */}
+          <VideoActions byteId={byte.byte_id} />
           
           {/* Up Next Card - Bottom right corner */}
           {nextByte && (
