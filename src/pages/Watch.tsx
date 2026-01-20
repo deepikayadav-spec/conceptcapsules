@@ -80,11 +80,17 @@ export default function Watch() {
   }, [bytes, currentIndex]);
 
   const handleNext = useCallback(() => {
+    // Mark current video as complete before navigating
+    if (currentByte) {
+      markCompleted(currentByte.byte_id);
+    }
+    
+    // Navigate to next video
     if (currentIndex < bytes.length - 1) {
       setCurrentByte(bytes[currentIndex + 1]);
       setAutoStartVideo(true);
     }
-  }, [bytes, currentIndex]);
+  }, [bytes, currentIndex, currentByte, markCompleted]);
 
   // Reset autoStartVideo after it's consumed
   useEffect(() => {
