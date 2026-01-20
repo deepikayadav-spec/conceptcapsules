@@ -37,7 +37,8 @@ export function driveUrlToPreview(url: string): string {
   const id = extractDriveFileId(url);
   if (!id) return url;
   
-  return `https://drive.google.com/file/d/${id}/preview`;
+  // Autoplay + muted improves perceived start time and reduces user-gesture friction
+  return `https://drive.google.com/file/d/${id}/preview?autoplay=1&mute=1`;
 }
 
 /**

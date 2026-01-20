@@ -17,6 +17,7 @@ import { TopicBadge } from '@/components/TopicBadge';
 import { Byte } from '@/types/byte';
 import { NotesModal } from '@/components/NotesModal';
 import { VideoActions } from '@/components/VideoActions';
+import { VideoIframePreloader } from '@/components/VideoIframePreloader';
 import { driveUrlToDirect, driveUrlToPreview } from '@/lib/driveUrl';
 
 interface VideoPlayerProps {
@@ -419,6 +420,7 @@ export function VideoPlayer({
                     }}
                     allow="autoplay; encrypted-media"
                     allowFullScreen
+                    loading="eager"
                     title={byte.byte_description}
                     onLoad={() => setIframeLoaded(true)}
                   />
@@ -434,6 +436,14 @@ export function VideoPlayer({
 
             {/* Video Actions - Like & Feedback (inside video) */}
             <VideoActions byteId={byte.byte_id} />
+
+            {/* Preload the next video iframe after current one is ready */}
+            {nextByte && (
+              <VideoIframePreloader
+                enabled={useFallbackIframe ? iframeLoaded : true}
+                src={driveUrlToPreview(nextByte.byte_url)}
+              />
+            )}
           </div>
           
           {/* Up Next Card - Bottom right corner */}
