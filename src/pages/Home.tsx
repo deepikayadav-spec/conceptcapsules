@@ -1,6 +1,7 @@
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Play, Zap, BookOpen, ArrowRight, Pill } from 'lucide-react';
+import { Play, Zap, BookOpen, ArrowRight, Pill, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
@@ -18,8 +19,28 @@ const benefits = [
 ];
 
 export default function Home() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const handleToggleFullscreen = useCallback(async () => {
+    if (!document.fullscreenElement && containerRef.current) {
+      await containerRef.current.requestFullscreen();
+    } else if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    }
+  }, []);
+
+  // Sync React state with browser fullscreen state
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-background overflow-hidden">
+    <div ref={containerRef} className="min-h-screen bg-background overflow-hidden">
       {/* Decorative Background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-1/4 -left-32 w-96 h-96 rounded-full bg-primary/10 blur-3xl" />
@@ -41,7 +62,21 @@ export default function Home() {
             Concept Capsule
           </span>
         </div>
-        <ThemeToggle />
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleToggleFullscreen}
+            className="rounded-xl hover:bg-muted"
+          >
+            {isFullscreen ? (
+              <Minimize2 className="w-5 h-5" />
+            ) : (
+              <Maximize2 className="w-5 h-5" />
+            )}
+          </Button>
+          <ThemeToggle />
+        </div>
       </motion.header>
 
       {/* Hero */}
