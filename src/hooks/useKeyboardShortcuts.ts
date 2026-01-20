@@ -3,21 +3,25 @@ import { useEffect, useCallback, useRef } from 'react';
 interface KeyboardShortcuts {
   onToggleLeftPanel?: () => void;
   onToggleNotesPanel?: () => void;
+  onToggleFullscreen?: () => void;
 }
 
 export function useKeyboardShortcuts({
   onToggleLeftPanel,
   onToggleNotesPanel,
+  onToggleFullscreen,
 }: KeyboardShortcuts) {
   // Use refs to always have the latest callback references
   const onToggleLeftPanelRef = useRef(onToggleLeftPanel);
   const onToggleNotesPanelRef = useRef(onToggleNotesPanel);
+  const onToggleFullscreenRef = useRef(onToggleFullscreen);
 
   // Update refs when callbacks change
   useEffect(() => {
     onToggleLeftPanelRef.current = onToggleLeftPanel;
     onToggleNotesPanelRef.current = onToggleNotesPanel;
-  }, [onToggleLeftPanel, onToggleNotesPanel]);
+    onToggleFullscreenRef.current = onToggleFullscreen;
+  }, [onToggleLeftPanel, onToggleNotesPanel, onToggleFullscreen]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -43,6 +47,11 @@ export function useKeyboardShortcuts({
           event.preventDefault();
           event.stopPropagation();
           onToggleNotesPanelRef.current?.();
+          break;
+        case 'f':
+          event.preventDefault();
+          event.stopPropagation();
+          onToggleFullscreenRef.current?.();
           break;
       }
     };
