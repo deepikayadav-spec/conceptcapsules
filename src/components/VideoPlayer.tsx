@@ -566,15 +566,21 @@ export function VideoPlayer({
                       top: '-48px',
                       height: 'calc(100% + 48px)',
                     }}
-                    allow="autoplay; accelerometer; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
+                    allow="autoplay; fullscreen; encrypted-media; picture-in-picture; clipboard-write"
+                    allowFullScreen={true}
+                    referrerPolicy="no-referrer-when-downgrade"
+                    sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
                     loading="eager"
                     title={byte.byte_description}
                     onLoad={() => {
+                      console.log('Iframe loaded for:', byte.byte_description, 'URL:', driveUrlToPreview(byte.byte_url, true));
                       setIframeLoaded(true);
                       setIframeError(false);
-                      // Start tracking only after iframe loads
                       setIframeIsWatching(true);
+                    }}
+                    onError={(e) => {
+                      console.error('Iframe error:', e);
+                      setIframeError(true);
                     }}
                   />
                 </motion.div>
