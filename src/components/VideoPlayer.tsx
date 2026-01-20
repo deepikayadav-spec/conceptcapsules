@@ -7,13 +7,17 @@ import {
   Minimize2, 
   CheckCircle2,
   SkipForward,
-  FileText
+  FileText,
+  Play,
+  Pause,
+  RotateCcw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TopicBadge } from '@/components/TopicBadge';
 import { Byte } from '@/types/byte';
 import { NotesModal } from '@/components/NotesModal';
 import { VideoActions } from '@/components/VideoActions';
+import { driveUrlToDirect, driveUrlToPreview } from '@/lib/driveUrl';
 
 interface VideoPlayerProps {
   byte: Byte;
@@ -28,15 +32,14 @@ interface VideoPlayerProps {
   onMarkCompleted: () => void;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
-  autoStart?: boolean; // Auto-start watching when selected from playlist
+  autoStart?: boolean;
 }
 
 /**
  * Video Player Component
  * 
- * Note: Google Drive iframes don't expose video events (timeupdate, ended).
- * Progress is simulated based on time spent watching ONLY when iframe is focused.
- * Auto-advances to next video after 3 complete loops.
+ * Uses HTML5 video element for accurate progress tracking.
+ * Falls back to iframe for Google Drive if direct video fails.
  */
 export function VideoPlayer({
   byte,
@@ -54,15 +57,23 @@ export function VideoPlayer({
   autoStart = false,
 }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isWatching, setIsWatching] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [notesOpen, setNotesOpen] = useState(false);
-  const [watchTime, setWatchTime] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [loopCount, setLoopCount] = useState(0);
-  const [isTabVisible, setIsTabVisible] = useState(true);
-  const progressIntervalRef = useRef<number | null>(null);
+  const [useFallbackIframe, setUseFallbackIframe] = useState(false);
+  const [videoError, setVideoError] = useState(false);
   const didMarkCompletedRef = useRef(false);
+  
+  // For iframe fallback - simulated tracking
+  const [iframeWatchTime, setIframeWatchTime] = useState(0);
+  const [iframeIsWatching, setIframeIsWatching] = useState(false);
+  const iframeIntervalRef = useRef<number | null>(null);
+  const [isTabVisible, setIsTabVisible] = useState(true);
+  
+  const ESTIMATED_VIDEO_DURATION = 60; // For iframe fallback
 
-  // Track tab visibility to pause progress when tab is hidden
+  // Track tab visibility
   useEffect(() => {
     const handleVisibility = () => {
       setIsTabVisible(!document.hidden);
@@ -71,86 +82,104 @@ export function VideoPlayer({
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
-  // Reset watch time/loop count when byte changes and start watching automatically
+  // Reset state when byte changes
   useEffect(() => {
-    setWatchTime(0);
     setLoopCount(0);
+    setIsPlaying(false);
     didMarkCompletedRef.current = false;
+    setVideoError(false);
+    setUseFallbackIframe(false);
+    setIframeWatchTime(0);
+    setIframeIsWatching(false);
     
-    // Start watching automatically
-    setIsWatching(true);
+    // Clear iframe interval
+    if (iframeIntervalRef.current) {
+      clearInterval(iframeIntervalRef.current);
+      iframeIntervalRef.current = null;
+    }
 
-    // Clear previous interval
-    if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current);
-      progressIntervalRef.current = null;
+    // Reset video element
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0;
+      videoRef.current.pause();
     }
   }, [byte.byte_id]);
 
-  // Simulate progress tracking (since we can't access iframe video events)
-  // Assume average video is ~60 seconds for progress calculation
-  const ESTIMATED_VIDEO_DURATION = 60; // seconds
-
-  // Track watch time with interval
-  useEffect(() => {
-    // ONLY track time when user is actively watching AND tab is visible
-    if (!isWatching || !isTabVisible) {
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-        progressIntervalRef.current = null;
-      }
-      return;
-    }
-
-    // Update watch time every second ONLY when watching
-    progressIntervalRef.current = window.setInterval(() => {
-      setWatchTime(prev => prev + 1);
-    }, 1000);
-
-    return () => {
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-        progressIntervalRef.current = null;
-      }
-    };
-  }, [byte.byte_id, isWatching, isTabVisible]);
-
-  // Calculate and update progress based on watch time
-  useEffect(() => {
-    if (!isWatching || !isTabVisible) return;
-
-    const percentage = Math.min((watchTime / ESTIMATED_VIDEO_DURATION) * 100, 100);
-
-    // Only update progress if not yet completed
-    if (!isCompleted && percentage > currentProgress) {
+  // Handle video time updates - ONLY updates progress when video is actually playing
+  const handleTimeUpdate = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || video.paused || !video.duration || video.duration === 0) return;
+    
+    const percentage = (video.currentTime / video.duration) * 100;
+    
+    // Only update if greater than current progress (no regression)
+    if (percentage > currentProgress && !isCompleted) {
       onProgressUpdate(percentage);
     }
-  }, [watchTime, isCompleted, isWatching, isTabVisible, currentProgress, onProgressUpdate]);
-
-  // Explicitly mark as completed when threshold is reached (exactly once per byte)
-  useEffect(() => {
-    if (isCompleted || didMarkCompletedRef.current) return;
     
-    const percentage = Math.min((watchTime / ESTIMATED_VIDEO_DURATION) * 100, 100);
-    
-    if (percentage >= 95) {
+    // Mark completed at 95%
+    if (percentage >= 95 && !isCompleted && !didMarkCompletedRef.current) {
       didMarkCompletedRef.current = true;
       onMarkCompleted();
     }
-  }, [watchTime, isCompleted, onMarkCompleted]);
+  }, [currentProgress, isCompleted, onProgressUpdate, onMarkCompleted]);
 
-  // Track when a loop completes based on watch time.
-  // This MUST keep working even after completion, because auto-advance is based on 3 full loops.
-  useEffect(() => {
-    if (!isWatching || !isTabVisible) return;
-
-    if (watchTime >= ESTIMATED_VIDEO_DURATION) {
-      setLoopCount(prev => prev + 1);
-      setWatchTime(0);
+  // Handle video ended event - marks completion immediately
+  const handleVideoEnded = useCallback(() => {
+    if (!isCompleted && !didMarkCompletedRef.current) {
+      didMarkCompletedRef.current = true;
+      onProgressUpdate(100);
+      onMarkCompleted();
     }
-  }, [watchTime, isWatching, isTabVisible]);
+    
+    // Increment loop count for auto-advance
+    setLoopCount(prev => prev + 1);
+    
+    // Loop the video
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0;
+      videoRef.current.play().catch(console.error);
+    }
+  }, [isCompleted, onProgressUpdate, onMarkCompleted]);
 
-  // Auto-advance after exactly 3 loops
+  // Handle play/pause events
+  const handlePlay = useCallback(() => {
+    setIsPlaying(true);
+  }, []);
+
+  const handlePause = useCallback(() => {
+    setIsPlaying(false);
+  }, []);
+
+  // Handle video error - fall back to iframe
+  const handleVideoError = useCallback(() => {
+    console.warn('HTML5 video failed to load, falling back to iframe');
+    setVideoError(true);
+    setUseFallbackIframe(true);
+  }, []);
+
+  // Toggle play/pause
+  const togglePlayPause = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    
+    if (video.paused) {
+      video.play().catch(console.error);
+    } else {
+      video.pause();
+    }
+  }, []);
+
+  // Restart video
+  const restartVideo = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    
+    video.currentTime = 0;
+    video.play().catch(console.error);
+  }, []);
+
+  // Auto-advance after 3 loops
   useEffect(() => {
     if (loopCount === 3 && nextByte) {
       const timer = setTimeout(() => {
@@ -160,14 +189,62 @@ export function VideoPlayer({
     }
   }, [loopCount, nextByte, onNext]);
 
-  // Extract file ID from Google Drive URL
-  const getEmbedUrl = (url: string) => {
-    const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-    if (match) {
-      return `https://drive.google.com/file/d/${match[1]}/preview`;
+  // === IFRAME FALLBACK LOGIC ===
+  // Only runs when using iframe fallback mode
+  
+  // Handle iframe click to start tracking
+  const handleIframeClick = useCallback(() => {
+    setIframeIsWatching(true);
+  }, []);
+
+  // Iframe simulated progress tracking
+  useEffect(() => {
+    if (!useFallbackIframe || !iframeIsWatching || !isTabVisible) {
+      if (iframeIntervalRef.current) {
+        clearInterval(iframeIntervalRef.current);
+        iframeIntervalRef.current = null;
+      }
+      return;
     }
-    return url;
-  };
+
+    iframeIntervalRef.current = window.setInterval(() => {
+      setIframeWatchTime(prev => prev + 1);
+    }, 1000);
+
+    return () => {
+      if (iframeIntervalRef.current) {
+        clearInterval(iframeIntervalRef.current);
+        iframeIntervalRef.current = null;
+      }
+    };
+  }, [useFallbackIframe, iframeIsWatching, isTabVisible]);
+
+  // Update progress from iframe watch time
+  useEffect(() => {
+    if (!useFallbackIframe || !iframeIsWatching || !isTabVisible) return;
+
+    const percentage = Math.min((iframeWatchTime / ESTIMATED_VIDEO_DURATION) * 100, 100);
+
+    if (!isCompleted && percentage > currentProgress) {
+      onProgressUpdate(percentage);
+    }
+    
+    // Mark completed at 95%
+    if (percentage >= 95 && !isCompleted && !didMarkCompletedRef.current) {
+      didMarkCompletedRef.current = true;
+      onMarkCompleted();
+    }
+    
+    // Handle loop for iframe
+    if (iframeWatchTime >= ESTIMATED_VIDEO_DURATION) {
+      setLoopCount(prev => prev + 1);
+      setIframeWatchTime(0);
+    }
+  }, [iframeWatchTime, useFallbackIframe, iframeIsWatching, isTabVisible, isCompleted, currentProgress, onProgressUpdate, onMarkCompleted]);
+
+  // Get video URLs
+  const directUrl = driveUrlToDirect(byte.byte_url);
+  const previewUrl = driveUrlToPreview(byte.byte_url);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -183,7 +260,6 @@ export function VideoPlayer({
       onNext();
     }
   }, [nextByte, onNext]);
-
 
   return (
     <>
@@ -259,30 +335,110 @@ export function VideoPlayer({
               aspectRatio: '9/16',
             }}
           >
-            {/* Iframe crop container - shifts iframe up to hide Google Drive toolbar */}
-            <div className="absolute inset-0 overflow-hidden">
-              <iframe
-                src={getEmbedUrl(byte.byte_url)}
-                className="absolute w-full"
-                style={{ 
-                  objectFit: 'contain',
-                  top: '-48px',
-                  height: 'calc(100% + 48px)',
-                }}
-                allow="autoplay; encrypted-media"
-                allowFullScreen
-                title={byte.byte_description}
-                onLoad={() => {
-                  document.body.focus();
-                }}
-              />
-            </div>
-            
-            {/* Click blocker for any remaining toolbar area (transparent) */}
-            <div 
-              className="absolute top-0 right-0 w-20 h-8 z-10 pointer-events-auto"
-              style={{ borderTopRightRadius: '12px' }}
-            />
+            {!useFallbackIframe ? (
+              /* HTML5 Video Player - Primary */
+              <>
+                <video
+                  ref={videoRef}
+                  key={byte.byte_id}
+                  src={directUrl}
+                  className="absolute inset-0 w-full h-full object-contain"
+                  onTimeUpdate={handleTimeUpdate}
+                  onEnded={handleVideoEnded}
+                  onPlay={handlePlay}
+                  onPause={handlePause}
+                  onError={handleVideoError}
+                  playsInline
+                  preload="metadata"
+                />
+                
+                {/* Play/Pause overlay button */}
+                <button
+                  onClick={togglePlayPause}
+                  className="absolute inset-0 z-10 flex items-center justify-center bg-transparent group"
+                >
+                  {!isPlaying && (
+                    <motion.div
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="w-20 h-20 rounded-full bg-primary/90 flex items-center justify-center shadow-lg group-hover:bg-primary transition-colors"
+                    >
+                      <Play className="w-10 h-10 text-primary-foreground ml-1" />
+                    </motion.div>
+                  )}
+                </button>
+                
+                {/* Video controls */}
+                {isPlaying && (
+                  <div className="absolute bottom-4 left-4 z-20 flex gap-2">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={(e) => { e.stopPropagation(); togglePlayPause(); }}
+                      className="rounded-full w-10 h-10 bg-black/60 hover:bg-black/80"
+                    >
+                      <Pause className="w-5 h-5 text-white" />
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={(e) => { e.stopPropagation(); restartVideo(); }}
+                      className="rounded-full w-10 h-10 bg-black/60 hover:bg-black/80"
+                    >
+                      <RotateCcw className="w-5 h-5 text-white" />
+                    </Button>
+                  </div>
+                )}
+              </>
+            ) : (
+              /* Iframe Fallback - for when direct video fails */
+              <>
+                <div className="absolute inset-0 overflow-hidden">
+                  <iframe
+                    src={previewUrl}
+                    className="absolute w-full"
+                    style={{ 
+                      objectFit: 'contain',
+                      top: '-48px',
+                      height: 'calc(100% + 48px)',
+                    }}
+                    allow="autoplay; encrypted-media"
+                    allowFullScreen
+                    title={byte.byte_description}
+                  />
+                </div>
+                
+                {/* Click overlay for iframe tracking */}
+                {!iframeIsWatching && !isCompleted && (
+                  <motion.button
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    onClick={handleIframeClick}
+                    className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm cursor-pointer group"
+                  >
+                    <motion.div
+                      initial={{ scale: 0.8 }}
+                      animate={{ scale: 1 }}
+                      className="w-20 h-20 rounded-full bg-primary/90 flex items-center justify-center shadow-lg group-hover:bg-primary transition-colors"
+                    >
+                      <Play className="w-10 h-10 text-primary-foreground ml-1" />
+                    </motion.div>
+                    <p className="mt-4 text-white/90 text-sm font-medium">
+                      Click to start tracking
+                    </p>
+                    <p className="mt-1 text-white/60 text-xs">
+                      Progress will be saved automatically
+                    </p>
+                  </motion.button>
+                )}
+                
+                {/* Click blocker for toolbar area */}
+                <div 
+                  className="absolute top-0 right-0 w-20 h-8 z-10 pointer-events-auto"
+                  style={{ borderTopRightRadius: '12px' }}
+                />
+              </>
+            )}
 
             {/* Video Actions - Like & Feedback (inside video) */}
             <VideoActions byteId={byte.byte_id} />
@@ -327,7 +483,6 @@ export function VideoPlayer({
             <ChevronLeft className="w-4 h-4" />
             <span className="hidden sm:inline">Previous</span>
           </Button>
-
 
           <Button
             variant="outline"
