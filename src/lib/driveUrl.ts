@@ -33,13 +33,12 @@ export function driveUrlToDirect(url: string): string {
  * Convert Google Drive URL to preview embed URL
  * Used as fallback when direct download doesn't work
  */
-export function driveUrlToPreview(url: string, autoplay = true): string {
+export function driveUrlToPreview(url: string): string {
   const id = extractDriveFileId(url);
   if (!id) return url;
   
-  // Preview URL with autoplay parameter for single-click playback
-  const baseUrl = `https://drive.google.com/file/d/${id}/preview`;
-  return autoplay ? `${baseUrl}?autoplay=1` : baseUrl;
+  // Standard preview URL - autoplay params are not reliably supported by Drive
+  return `https://drive.google.com/file/d/${id}/preview`;
 }
 
 /**

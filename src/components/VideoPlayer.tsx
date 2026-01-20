@@ -298,6 +298,7 @@ export function VideoPlayer({
 
   // Get video URLs
   const directUrl = driveUrlToDirect(byte.byte_url);
+  const previewUrl = driveUrlToPreview(byte.byte_url);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -474,7 +475,7 @@ export function VideoPlayer({
                             asChild
                             className="rounded-xl text-white/80 hover:text-white hover:bg-white/10"
                           >
-                            <a href={driveUrlToPreview(byte.byte_url, false)} target="_blank" rel="noopener noreferrer">
+                            <a href={previewUrl} target="_blank" rel="noopener noreferrer">
                               Open in new tab
                             </a>
                           </Button>
@@ -559,14 +560,14 @@ export function VideoPlayer({
                 >
                   <iframe
                     key={iframeKey}
-                    src={driveUrlToPreview(byte.byte_url, true)}
+                    src={previewUrl}
                     className="absolute w-full"
                     style={{ 
                       objectFit: 'contain',
                       top: '-48px',
                       height: 'calc(100% + 48px)',
                     }}
-                    allow="autoplay; accelerometer; encrypted-media; gyroscope; picture-in-picture"
+                    allow="autoplay; encrypted-media"
                     allowFullScreen
                     loading="eager"
                     title={byte.byte_description}
