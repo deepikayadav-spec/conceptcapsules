@@ -79,6 +79,7 @@ export function VideoPlayer({
   
   // For iframe fallback - simulated tracking
   const [iframeWatchTime, setIframeWatchTime] = useState(0);
+  const iframeWatchTimeRef = useRef(0);
   const [iframeIsWatching, setIframeIsWatching] = useState(false);
   const iframeIntervalRef = useRef<number | null>(null);
   const [isTabVisible, setIsTabVisible] = useState(true);
@@ -110,6 +111,7 @@ export function VideoPlayer({
     setIframeLoaded(false);
     setIframeError(false);
     setIframeKey(prev => prev + 1);
+    iframeWatchTimeRef.current = 0;
     setIframeWatchTime(0);
     setIframeIsWatching(false); // Don't auto-start - wait for iframe load
     setVideoEndedThisSession(false); // Reset session completion flag
@@ -255,9 +257,9 @@ export function VideoPlayer({
     setIframeIsWatching(true);
   }, []);
 
-  // Iframe simulated progress tracking
+  // Iframe simulated progress tracking (tick + unlock happen in the SAME second)
   useEffect(() => {
-    if (!useFallbackIframe || !iframeIsWatching || !isTabVisible) {
+    if (!useFallbackIframe || !iframeIsWatching || !isTabVisible || videoEndedThisSession) {
       if (iframeIntervalRef.current) {
         clearInterval(iframeIntervalRef.current);
         iframeIntervalRef.current = null;
@@ -266,7 +268,32 @@ export function VideoPlayer({
     }
 
     iframeIntervalRef.current = window.setInterval(() => {
-      setIframeWatchTime(prev => prev + 1);
+      // Update watch time (ref + state)
+      const nextWatchTime = iframeWatchTimeRef.current + 1;
+      iframeWatchTimeRef.current = nextWatchTime;
+      setIframeWatchTime(nextWatchTime);
+
+      // Update progress based on configured duration
+      const percentage = Math.min((nextWatchTime / videoDuration) * 100, 100);
+      if (!isCompleted && percentage > currentProgress) {
+        onProgressUpdate(percentage);
+      }
+
+      // INSTANT unlock when hitting threshold (no extra effect/render cycle needed)
+      if ((percentage >= 95 || nextWatchTime >= videoDuration) && !didMarkCompletedRef.current) {
+        didMarkCompletedRef.current = true;
+        setVideoEndedThisSession(true);
+
+        // Stop ticking immediately
+        if (iframeIntervalRef.current) {
+          clearInterval(iframeIntervalRef.current);
+          iframeIntervalRef.current = null;
+        }
+
+        if (!isCompleted) {
+          onMarkCompleted();
+        }
+      }
     }, 1000);
 
     return () => {
@@ -275,38 +302,17 @@ export function VideoPlayer({
         iframeIntervalRef.current = null;
       }
     };
-  }, [useFallbackIframe, iframeIsWatching, isTabVisible]);
-
-  // Update progress from iframe watch time - using actual video duration
-  useEffect(() => {
-    if (!useFallbackIframe || !iframeIsWatching || !isTabVisible) return;
-
-    const percentage = Math.min((iframeWatchTime / videoDuration) * 100, 100);
-
-    if (!isCompleted && percentage > currentProgress) {
-      onProgressUpdate(percentage);
-    }
-    
-    // Mark completed at 95% or when full duration reached - unlock Next immediately
-    if ((percentage >= 95 || iframeWatchTime >= videoDuration) && !didMarkCompletedRef.current) {
-      didMarkCompletedRef.current = true;
-      setVideoEndedThisSession(true); // Enable Next button IMMEDIATELY
-      if (iframeIntervalRef.current) {
-        clearInterval(iframeIntervalRef.current); // Stop the timer
-        iframeIntervalRef.current = null;
-      }
-      if (!isCompleted) {
-        onMarkCompleted();
-      }
-    }
-    
-    // Handle loop for iframe (video "ended") - only if we haven't stopped already
-    if (iframeWatchTime >= videoDuration && iframeIntervalRef.current) {
-      setVideoEndedThisSession(true); // Video completed a full loop
-      setLoopCount(prev => prev + 1);
-      setIframeWatchTime(0);
-    }
-  }, [iframeWatchTime, useFallbackIframe, iframeIsWatching, isTabVisible, isCompleted, currentProgress, onProgressUpdate, onMarkCompleted, videoDuration]);
+  }, [
+    useFallbackIframe,
+    iframeIsWatching,
+    isTabVisible,
+    videoEndedThisSession,
+    videoDuration,
+    isCompleted,
+    currentProgress,
+    onProgressUpdate,
+    onMarkCompleted,
+  ]);
 
   // Get video URLs
   const directUrl = driveUrlToDirect(byte.byte_url);
