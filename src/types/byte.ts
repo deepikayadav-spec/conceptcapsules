@@ -4,6 +4,7 @@ export interface Byte {
   byte_description: string;
   byte_topics: string[];
   byte_url: string;
+  duration?: number; // Duration in seconds for progress tracking
 }
 
 export interface WatchState {
