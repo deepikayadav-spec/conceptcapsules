@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -7,8 +7,7 @@ import {
   Minimize2, 
   CheckCircle2,
   SkipForward,
-  FileText,
-  Play
+  FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TopicBadge } from '@/components/TopicBadge';
@@ -55,8 +54,6 @@ export function VideoPlayer({
   autoStart = false,
 }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [hasUserEngaged, setHasUserEngaged] = useState(false);
-  const [showStartOverlay, setShowStartOverlay] = useState(true);
   const [isWatching, setIsWatching] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [watchTime, setWatchTime] = useState(0);
@@ -74,46 +71,21 @@ export function VideoPlayer({
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
-  // Handle click on the start overlay to begin tracking
-  const handleStartTracking = useCallback(() => {
-    setHasUserEngaged(true);
-    setShowStartOverlay(false);
-    setIsWatching(true);
-  }, []);
-
-  // Reset watch time/loop count when byte changes
+  // Reset watch time/loop count when byte changes and start watching automatically
   useEffect(() => {
     setWatchTime(0);
     setLoopCount(0);
-    setIsWatching(false);
     didMarkCompletedRef.current = false;
     
-    // Show overlay again for new byte, unless user has engaged before and autoStart is true
-    // This creates a "session" behavior: once you've clicked once, subsequent videos auto-start
-    if (!hasUserEngaged) {
-      setShowStartOverlay(true);
-    } else if (autoStart) {
-      // User has engaged before in this session, auto-start this video
-      setShowStartOverlay(false);
-      setIsWatching(true);
-    } else {
-      setShowStartOverlay(true);
-    }
+    // Start watching automatically
+    setIsWatching(true);
 
     // Clear previous interval
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current);
       progressIntervalRef.current = null;
     }
-  }, [byte.byte_id, hasUserEngaged, autoStart]);
-
-  // Auto-start is now handled in the byte change effect above
-  // This effect is kept for any edge cases where autoStart changes after mount
-  useEffect(() => {
-    if (autoStart && hasUserEngaged && !isWatching && !showStartOverlay) {
-      setIsWatching(true);
-    }
-  }, [autoStart, hasUserEngaged, isWatching, showStartOverlay]);
+  }, [byte.byte_id]);
 
   // Simulate progress tracking (since we can't access iframe video events)
   // Assume average video is ~60 seconds for progress calculation
@@ -311,34 +283,6 @@ export function VideoPlayer({
               className="absolute top-0 right-0 w-20 h-8 z-10 pointer-events-auto"
               style={{ borderTopRightRadius: '12px' }}
             />
-
-            {/* Click to Start Overlay - captures first interaction */}
-            <AnimatePresence>
-              {showStartOverlay && !isCompleted && (
-                <motion.button
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  onClick={handleStartTracking}
-                  className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm cursor-pointer group"
-                >
-                  <motion.div
-                    initial={{ scale: 0.8 }}
-                    animate={{ scale: 1 }}
-                    className="w-20 h-20 rounded-full bg-primary/90 flex items-center justify-center shadow-lg group-hover:bg-primary transition-colors"
-                  >
-                    <Play className="w-10 h-10 text-primary-foreground ml-1" />
-                  </motion.div>
-                  <p className="mt-4 text-white/90 text-sm font-medium">
-                    Click to start tracking
-                  </p>
-                  <p className="mt-1 text-white/60 text-xs">
-                    Progress will be saved automatically
-                  </p>
-                </motion.button>
-              )}
-            </AnimatePresence>
 
             {/* Video Actions - Like & Feedback (inside video) */}
             <VideoActions byteId={byte.byte_id} />
