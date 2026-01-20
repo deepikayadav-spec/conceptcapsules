@@ -112,7 +112,9 @@ export function VideoPlayer({
     setIframeKey(prev => prev + 1);
     setIframeWatchTime(0);
     setIframeIsWatching(false); // Don't auto-start - wait for iframe load
-    setVideoEndedThisSession(false); // Reset session completion flag
+    
+    // Reset session completion flag, but keep unlocked if already completed previously
+    setVideoEndedThisSession(isCompleted);
     
     // Clear any existing timeout
     if (iframeTimeoutRef.current) {
@@ -137,7 +139,7 @@ export function VideoPlayer({
         clearTimeout(iframeTimeoutRef.current);
       }
     };
-  }, [byte.byte_id]);
+  }, [byte.byte_id, isCompleted]);
 
   // Iframe load timeout - show error state if loading takes too long
   useEffect(() => {
@@ -255,7 +257,7 @@ export function VideoPlayer({
     setIframeIsWatching(true);
   }, []);
 
-  // Iframe simulated progress tracking
+  // Iframe simulated progress tracking - unlock INSTANTLY at 95% inside callback
   useEffect(() => {
     if (!useFallbackIframe || !iframeIsWatching || !isTabVisible) {
       if (iframeIntervalRef.current) {
@@ -265,48 +267,45 @@ export function VideoPlayer({
       return;
     }
 
-    iframeIntervalRef.current = window.setInterval(() => {
-      setIframeWatchTime(prev => prev + 1);
+    const intervalId = window.setInterval(() => {
+      setIframeWatchTime(prev => {
+        const newWatchTime = prev + 1;
+        const percentage = Math.min((newWatchTime / videoDuration) * 100, 100);
+        
+        // Update progress
+        if (!isCompleted && percentage > currentProgress) {
+          onProgressUpdate(percentage);
+        }
+        
+        // Check completion INSIDE setIframeWatchTime - this is synchronous, no delay
+        if (percentage >= 95 && !didMarkCompletedRef.current) {
+          didMarkCompletedRef.current = true;
+          setVideoEndedThisSession(true); // Unlock Next button INSTANTLY
+          clearInterval(intervalId); // Stop the timer immediately
+          if (!isCompleted) {
+            onMarkCompleted();
+          }
+          return videoDuration; // Cap at max duration
+        }
+        
+        // Handle loop (video "ended")
+        if (newWatchTime >= videoDuration) {
+          setVideoEndedThisSession(true);
+          setLoopCount(prev => prev + 1);
+          return 0; // Reset for next loop
+        }
+        
+        return newWatchTime;
+      });
     }, 1000);
 
+    iframeIntervalRef.current = intervalId;
+
     return () => {
-      if (iframeIntervalRef.current) {
-        clearInterval(iframeIntervalRef.current);
-        iframeIntervalRef.current = null;
-      }
+      clearInterval(intervalId);
+      iframeIntervalRef.current = null;
     };
-  }, [useFallbackIframe, iframeIsWatching, isTabVisible]);
-
-  // Update progress from iframe watch time - using actual video duration
-  useEffect(() => {
-    if (!useFallbackIframe || !iframeIsWatching || !isTabVisible) return;
-
-    const percentage = Math.min((iframeWatchTime / videoDuration) * 100, 100);
-
-    if (!isCompleted && percentage > currentProgress) {
-      onProgressUpdate(percentage);
-    }
-    
-    // Mark completed at 95% or when full duration reached - unlock Next immediately
-    if ((percentage >= 95 || iframeWatchTime >= videoDuration) && !didMarkCompletedRef.current) {
-      didMarkCompletedRef.current = true;
-      setVideoEndedThisSession(true); // Enable Next button IMMEDIATELY
-      if (iframeIntervalRef.current) {
-        clearInterval(iframeIntervalRef.current); // Stop the timer
-        iframeIntervalRef.current = null;
-      }
-      if (!isCompleted) {
-        onMarkCompleted();
-      }
-    }
-    
-    // Handle loop for iframe (video "ended") - only if we haven't stopped already
-    if (iframeWatchTime >= videoDuration && iframeIntervalRef.current) {
-      setVideoEndedThisSession(true); // Video completed a full loop
-      setLoopCount(prev => prev + 1);
-      setIframeWatchTime(0);
-    }
-  }, [iframeWatchTime, useFallbackIframe, iframeIsWatching, isTabVisible, isCompleted, currentProgress, onProgressUpdate, onMarkCompleted, videoDuration]);
+  }, [useFallbackIframe, iframeIsWatching, isTabVisible, videoDuration, isCompleted, currentProgress, onProgressUpdate, onMarkCompleted]);
 
   // Get video URLs
   const directUrl = driveUrlToDirect(byte.byte_url);
