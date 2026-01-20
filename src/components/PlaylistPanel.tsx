@@ -213,19 +213,12 @@ export function PlaylistPanel({
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className={cn(
-                        'text-sm font-medium line-clamp-2',
-                        isActive ? 'text-foreground' : 'text-foreground/80'
-                      )}>
-                        {byte.byte_description}
-                      </p>
-                      {!isCompleted && progress && progress.percentage > 0 && (
-                        <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
-                          {Math.round(progress.percentage)}%
-                        </span>
-                      )}
-                    </div>
+                    <p className={cn(
+                      'text-sm font-medium line-clamp-2',
+                      isActive ? 'text-foreground' : 'text-foreground/80'
+                    )}>
+                      {byte.byte_description}
+                    </p>
                     <div className="flex flex-wrap gap-1 mt-1.5">
                       {byte.byte_topics.slice(0, 2).map(topic => (
                         <TopicBadge key={topic} topic={topic} size="sm" />
