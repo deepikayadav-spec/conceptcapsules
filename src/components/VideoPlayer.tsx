@@ -408,6 +408,7 @@ export function VideoPlayer({
                 )}
                 <div className="absolute inset-0 overflow-hidden">
                   <iframe
+                    key={byte.byte_id}
                     src={previewUrl}
                     className="absolute w-full"
                     style={{ 
@@ -415,10 +416,11 @@ export function VideoPlayer({
                       top: '-48px',
                       height: 'calc(100% + 48px)',
                       opacity: iframeLoaded ? 1 : 0,
-                      transition: 'opacity 0.2s ease-in-out',
+                      transition: 'opacity 0.15s ease-out',
                     }}
-                    allow="autoplay; encrypted-media"
+                    allow="autoplay; encrypted-media; accelerometer; gyroscope"
                     allowFullScreen
+                    loading="eager"
                     title={byte.byte_description}
                     onLoad={() => setIframeLoaded(true)}
                   />
