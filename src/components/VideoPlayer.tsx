@@ -66,8 +66,11 @@ export function VideoPlayer({
   // Go directly to iframe mode for faster loading
   const [useFallbackIframe, setUseFallbackIframe] = useState(true);
   const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [iframeError, setIframeError] = useState(false);
+  const [iframeKey, setIframeKey] = useState(0);
   const [videoError, setVideoError] = useState(false);
   const didMarkCompletedRef = useRef(false);
+  const iframeTimeoutRef = useRef<number | null>(null);
   
   // For iframe fallback - simulated tracking
   const [iframeWatchTime, setIframeWatchTime] = useState(0);
@@ -76,6 +79,7 @@ export function VideoPlayer({
   const [isTabVisible, setIsTabVisible] = useState(true);
   
   const ESTIMATED_VIDEO_DURATION = 60; // For iframe fallback
+  const IFRAME_LOAD_TIMEOUT = 10000; // 10 seconds
 
   // Track tab visibility
   useEffect(() => {
@@ -94,8 +98,16 @@ export function VideoPlayer({
     setVideoError(false);
     setUseFallbackIframe(true); // Always use iframe for Google Drive
     setIframeLoaded(false);
+    setIframeError(false);
+    setIframeKey(prev => prev + 1);
     setIframeWatchTime(0);
     setIframeIsWatching(true); // Auto-start tracking for iframe
+    
+    // Clear any existing timeout
+    if (iframeTimeoutRef.current) {
+      clearTimeout(iframeTimeoutRef.current);
+      iframeTimeoutRef.current = null;
+    }
     
     // Clear iframe interval
     if (iframeIntervalRef.current) {
@@ -108,7 +120,30 @@ export function VideoPlayer({
       videoRef.current.currentTime = 0;
       videoRef.current.pause();
     }
+    
+    return () => {
+      if (iframeTimeoutRef.current) {
+        clearTimeout(iframeTimeoutRef.current);
+      }
+    };
   }, [byte.byte_id]);
+
+  // Iframe load timeout - show error state if loading takes too long
+  useEffect(() => {
+    if (!useFallbackIframe || iframeLoaded || iframeError) return;
+    
+    iframeTimeoutRef.current = window.setTimeout(() => {
+      if (!iframeLoaded) {
+        setIframeError(true);
+      }
+    }, IFRAME_LOAD_TIMEOUT);
+    
+    return () => {
+      if (iframeTimeoutRef.current) {
+        clearTimeout(iframeTimeoutRef.current);
+      }
+    };
+  }, [useFallbackIframe, iframeLoaded, iframeError, iframeKey]);
 
   // Handle video time updates - ONLY updates progress when video is actually playing
   const handleTimeUpdate = useCallback(() => {
@@ -161,6 +196,13 @@ export function VideoPlayer({
     console.warn('HTML5 video failed to load, falling back to iframe');
     setVideoError(true);
     setUseFallbackIframe(true);
+  }, []);
+
+  // Retry loading iframe
+  const handleRetryIframe = useCallback(() => {
+    setIframeError(false);
+    setIframeLoaded(false);
+    setIframeKey(prev => prev + 1);
   }, []);
 
   // Toggle play/pause
@@ -398,17 +440,51 @@ export function VideoPlayer({
             ) : (
               /* Iframe Player - Primary method for Google Drive */
               <>
-                {/* Loading skeleton */}
+                {/* Loading skeleton or error state */}
                 {!iframeLoaded && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-                      <span className="text-sm text-muted-foreground">Loading video...</span>
-                    </div>
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-20">
+                    {iframeError ? (
+                      <div className="flex flex-col items-center gap-4 p-6 text-center">
+                        <div className="w-12 h-12 rounded-full bg-destructive/20 flex items-center justify-center">
+                          <RotateCcw className="w-6 h-6 text-destructive" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground mb-1">Video failed to load</p>
+                          <p className="text-xs text-muted-foreground">Google Drive may be slow or unavailable</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleRetryIframe}
+                            className="rounded-xl gap-2"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                            Retry
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            asChild
+                            className="rounded-xl"
+                          >
+                            <a href={previewUrl} target="_blank" rel="noopener noreferrer">
+                              Open in new tab
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+                        <span className="text-sm text-muted-foreground">Loading video...</span>
+                      </div>
+                    )}
                   </div>
                 )}
                 <div className="absolute inset-0 overflow-hidden">
                   <iframe
+                    key={iframeKey}
                     src={previewUrl}
                     className="absolute w-full"
                     style={{ 
@@ -422,7 +498,10 @@ export function VideoPlayer({
                     allowFullScreen
                     loading="eager"
                     title={byte.byte_description}
-                    onLoad={() => setIframeLoaded(true)}
+                    onLoad={() => {
+                      setIframeLoaded(true);
+                      setIframeError(false);
+                    }}
                   />
                 </div>
                 
