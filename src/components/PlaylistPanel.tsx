@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Search, ChevronLeft, X, Check } from 'lucide-react';
+import { Search, ChevronLeft, X, Check, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -8,13 +8,8 @@ import { Switch } from '@/components/ui/switch';
 import { TopicBadge } from '@/components/TopicBadge';
 import { Byte, ALL_TOPICS, getTopicDisplayName } from '@/types/byte';
 import { cn } from '@/lib/utils';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface PlaylistPanelProps {
   bytes: Byte[];
@@ -36,7 +31,7 @@ export function PlaylistPanel({
   getProgress,
 }: PlaylistPanelProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTopic, setSelectedTopic] = useState<string>('all');
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [showUnwatchedOnly, setShowUnwatchedOnly] = useState(false);
 
   const filteredBytes = useMemo(() => {
@@ -49,8 +44,8 @@ export function PlaylistPanel({
         );
       
       const matchesTopic = 
-        selectedTopic === 'all' ||
-        byte.byte_topics.includes(selectedTopic);
+        selectedTopics.length === 0 ||
+        byte.byte_topics.some(topic => selectedTopics.includes(topic));
 
       const matchesCompletion = 
         !showUnwatchedOnly || 
@@ -58,19 +53,23 @@ export function PlaylistPanel({
 
       return matchesSearch && matchesTopic && matchesCompletion;
     });
-  }, [bytes, searchQuery, selectedTopic, showUnwatchedOnly, completedVideos]);
+  }, [bytes, searchQuery, selectedTopics, showUnwatchedOnly, completedVideos]);
 
   const clearFilters = () => {
     setSearchQuery('');
-    setSelectedTopic('all');
+    setSelectedTopics([]);
     setShowUnwatchedOnly(false);
   };
 
-  const handleTopicChange = (value: string) => {
-    setSelectedTopic(value);
+  const toggleTopic = (topic: string) => {
+    setSelectedTopics(prev =>
+      prev.includes(topic)
+        ? prev.filter(t => t !== topic)
+        : [...prev, topic]
+    );
   };
 
-  const hasActiveFilters = searchQuery || selectedTopic !== 'all' || showUnwatchedOnly;
+  const hasActiveFilters = searchQuery || selectedTopics.length > 0 || showUnwatchedOnly;
 
   return (
     <div className="h-full glass border-r border-border/50 flex flex-col overflow-hidden">
@@ -99,27 +98,41 @@ export function PlaylistPanel({
           />
         </div>
 
-        {/* Topic Dropdown Filter */}
+        {/* Topic Multi-Select Filter */}
         <div className="mt-3">
-          <Select value={selectedTopic} onValueChange={handleTopicChange}>
-            <SelectTrigger className="w-full rounded-xl bg-muted/50 border-0 focus:ring-1 focus:ring-primary">
-              <SelectValue>
-                {selectedTopic === 'all' 
-                  ? 'Select Topic' 
-                  : `Topic: ${getTopicDisplayName(selectedTopic)}`}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent className="bg-background border border-border z-50 max-h-[300px]">
-              <SelectItem value="all" className="cursor-pointer">
-                All Topics
-              </SelectItem>
-              {ALL_TOPICS.map(topic => (
-                <SelectItem key={topic} value={topic} className="cursor-pointer">
-                  {getTopicDisplayName(topic)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                className="w-full justify-between rounded-xl bg-muted/50 border-0 hover:bg-muted/80 focus:ring-1 focus:ring-primary"
+              >
+                <span className="text-sm">
+                  {selectedTopics.length === 0
+                    ? 'All Topics'
+                    : `${selectedTopics.length} topic${selectedTopics.length > 1 ? 's' : ''} selected`}
+                </span>
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-2" align="start">
+              <ScrollArea className="max-h-[250px]">
+                <div className="space-y-1">
+                  {ALL_TOPICS.map(topic => (
+                    <label
+                      key={topic}
+                      className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted cursor-pointer"
+                    >
+                      <Checkbox
+                        checked={selectedTopics.includes(topic)}
+                        onCheckedChange={() => toggleTopic(topic)}
+                      />
+                      <span className="text-sm">{getTopicDisplayName(topic)}</span>
+                    </label>
+                  ))}
+                </div>
+              </ScrollArea>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* Unwatched filter toggle */}
