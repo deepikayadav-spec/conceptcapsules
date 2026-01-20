@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Header } from '@/components/Header';
 import { PlaylistPanel } from '@/components/PlaylistPanel';
@@ -29,6 +29,7 @@ export default function Watch() {
   const [currentByte, setCurrentByte] = useState<Byte | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [autoStartVideo, setAutoStartVideo] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   
   // Progress tracking
   const { 
@@ -100,8 +101,21 @@ export default function Watch() {
   }, [currentByte, updateProgress]);
 
 
-  const handleToggleFullscreen = useCallback(() => {
-    setIsFullscreen(prev => !prev);
+  const handleToggleFullscreen = useCallback(async () => {
+    if (!document.fullscreenElement && containerRef.current) {
+      await containerRef.current.requestFullscreen();
+    } else if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    }
+  }, []);
+
+  // Sync React state with browser fullscreen state
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
   const handleToggleLeftPanel = useCallback(() => {
@@ -117,6 +131,7 @@ export default function Watch() {
   // Keyboard shortcuts
   useKeyboardShortcuts({
     onToggleLeftPanel: handleToggleLeftPanel,
+    onToggleFullscreen: handleToggleFullscreen,
   });
 
   // Get current video progress
@@ -149,15 +164,13 @@ export default function Watch() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
+    <div ref={containerRef} className="h-screen flex flex-col bg-background overflow-hidden">
       {/* Header */}
-      {!isFullscreen && (
-        <Header
-          showProgress
-          completed={completedCount}
-          total={bytes.length}
-        />
-      )}
+      <Header
+        showProgress
+        completed={completedCount}
+        total={bytes.length}
+      />
 
       {/* Main Content */}
       <div className="flex-1 min-h-0">
@@ -214,7 +227,7 @@ export default function Watch() {
         </ResizablePanelGroup>
 
         {/* Collapsed panel toggle button */}
-        {!isFullscreen && !state.leftPanelOpen && (
+        {!state.leftPanelOpen && (
           <motion.button
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
