@@ -310,10 +310,10 @@ export function VideoPlayer({
               className="absolute top-0 right-0 w-20 h-8 z-10 pointer-events-auto"
               style={{ borderTopRightRadius: '12px' }}
             />
-          </div>
 
-          {/* Video Actions - Like & Feedback */}
-          <VideoActions byteId={byte.byte_id} />
+            {/* Video Actions - Like & Feedback (inside video) */}
+            <VideoActions byteId={byte.byte_id} />
+          </div>
           
           {/* Up Next Card - Bottom right corner */}
           {nextByte && (
