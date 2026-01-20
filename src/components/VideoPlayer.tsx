@@ -61,7 +61,10 @@ export function VideoPlayer({
   const [notesOpen, setNotesOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [loopCount, setLoopCount] = useState(0);
-  const [useFallbackIframe, setUseFallbackIframe] = useState(false);
+  // Skip HTML5 video attempt - Google Drive URLs don't support CORS for direct playback
+  // Go directly to iframe mode for faster loading
+  const [useFallbackIframe, setUseFallbackIframe] = useState(true);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const didMarkCompletedRef = useRef(false);
   
@@ -88,9 +91,10 @@ export function VideoPlayer({
     setIsPlaying(false);
     didMarkCompletedRef.current = false;
     setVideoError(false);
-    setUseFallbackIframe(false);
+    setUseFallbackIframe(true); // Always use iframe for Google Drive
+    setIframeLoaded(false);
     setIframeWatchTime(0);
-    setIframeIsWatching(true); // Auto-start tracking for iframe fallback
+    setIframeIsWatching(true); // Auto-start tracking for iframe
     
     // Clear iframe interval
     if (iframeIntervalRef.current) {
@@ -391,8 +395,17 @@ export function VideoPlayer({
                 )}
               </>
             ) : (
-              /* Iframe Fallback - for when direct video fails */
+              /* Iframe Player - Primary method for Google Drive */
               <>
+                {/* Loading skeleton */}
+                {!iframeLoaded && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+                      <span className="text-sm text-muted-foreground">Loading video...</span>
+                    </div>
+                  </div>
+                )}
                 <div className="absolute inset-0 overflow-hidden">
                   <iframe
                     src={previewUrl}
@@ -401,13 +414,15 @@ export function VideoPlayer({
                       objectFit: 'contain',
                       top: '-48px',
                       height: 'calc(100% + 48px)',
+                      opacity: iframeLoaded ? 1 : 0,
+                      transition: 'opacity 0.2s ease-in-out',
                     }}
                     allow="autoplay; encrypted-media"
                     allowFullScreen
                     title={byte.byte_description}
+                    onLoad={() => setIframeLoaded(true)}
                   />
                 </div>
-                
                 
                 {/* Click blocker for toolbar area */}
                 <div 
