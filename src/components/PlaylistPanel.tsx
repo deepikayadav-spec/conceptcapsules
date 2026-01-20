@@ -119,6 +119,16 @@ export function PlaylistPanel({
             <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-background border border-border z-50" align="start">
               <ScrollArea className="h-[250px]">
                 <div className="p-2 space-y-1">
+                  <label
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={selectedTopics.length === 0}
+                      onCheckedChange={() => setSelectedTopics([])}
+                    />
+                    <span className="text-sm font-medium">All Topics</span>
+                  </label>
+                  <div className="h-px bg-border my-1" />
                   {ALL_TOPICS.map(topic => (
                     <label
                       key={topic}
