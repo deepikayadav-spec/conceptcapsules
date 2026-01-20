@@ -14,7 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      video_feedback: {
+        Row: {
+          byte_id: string
+          comment: string | null
+          created_at: string
+          id: string
+          rating: number
+          user_fingerprint: string
+        }
+        Insert: {
+          byte_id: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating: number
+          user_fingerprint: string
+        }
+        Update: {
+          byte_id?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating?: number
+          user_fingerprint?: string
+        }
+        Relationships: []
+      }
+      video_likes: {
+        Row: {
+          byte_id: string
+          created_at: string
+          id: string
+          user_fingerprint: string
+        }
+        Insert: {
+          byte_id: string
+          created_at?: string
+          id?: string
+          user_fingerprint: string
+        }
+        Update: {
+          byte_id?: string
+          created_at?: string
+          id?: string
+          user_fingerprint?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
