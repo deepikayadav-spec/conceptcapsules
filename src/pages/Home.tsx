@@ -23,8 +23,16 @@ export default function Home() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const navigate = useNavigate();
 
-  const handleStartWatching = useCallback(() => {
-    navigate('/watch?autoFullscreen=true');
+  const handleStartWatching = useCallback(async () => {
+    // Request fullscreen BEFORE navigation (requires user gesture)
+    if (containerRef.current) {
+      try {
+        await containerRef.current.requestFullscreen();
+      } catch (err) {
+        console.log('Fullscreen request blocked, continuing without fullscreen');
+      }
+    }
+    navigate('/watch');
   }, [navigate]);
 
   const handleToggleFullscreen = useCallback(async () => {
