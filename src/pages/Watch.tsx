@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Header } from '@/components/Header';
 import { PlaylistPanel } from '@/components/PlaylistPanel';
@@ -29,6 +30,7 @@ export default function Watch() {
   const [currentByte, setCurrentByte] = useState<Byte | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [autoStartVideo, setAutoStartVideo] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
   const containerRef = useRef<HTMLDivElement>(null);
   
   // Progress tracking
@@ -123,6 +125,22 @@ export default function Watch() {
     };
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  // Auto-enter fullscreen when navigating from Home with fullscreen param
+  // useLayoutEffect runs synchronously before paint, maximizing chance of user gesture validity
+  useLayoutEffect(() => {
+    const shouldFullscreen = searchParams.get('fullscreen') === 'true';
+    
+    if (shouldFullscreen) {
+      // Clear the URL parameter immediately to prevent re-triggering
+      setSearchParams({}, { replace: true });
+      
+      // Request fullscreen on document.documentElement for most reliable behavior
+      document.documentElement.requestFullscreen().catch((err) => {
+        console.log('Fullscreen request blocked by browser:', err);
+      });
+    }
   }, []);
 
   const handleToggleLeftPanel = useCallback(() => {
