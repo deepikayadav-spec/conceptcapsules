@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Play, Zap, BookOpen, ArrowRight, Pill, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,11 @@ const benefits = [
 export default function Home() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleStartWatching = useCallback(() => {
+    navigate('/watch?autoFullscreen=true');
+  }, [navigate]);
 
   const handleToggleFullscreen = useCallback(async () => {
     if (!document.fullscreenElement && containerRef.current) {
@@ -120,16 +125,15 @@ export default function Home() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.4, duration: 0.5 }}
           >
-            <Link to="/watch">
-              <Button
-                size="lg"
-                className="h-14 px-8 text-lg rounded-2xl gradient-hero text-primary-foreground shadow-glow hover:shadow-glow-lg transition-shadow group"
-              >
-                <Play className="w-5 h-5 mr-2 fill-current" />
-                Start Watching
-                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
+            <Button
+              size="lg"
+              onClick={handleStartWatching}
+              className="h-14 px-8 text-lg rounded-2xl gradient-hero text-primary-foreground shadow-glow hover:shadow-glow-lg transition-shadow group"
+            >
+              <Play className="w-5 h-5 mr-2 fill-current" />
+              Start Watching
+              <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+            </Button>
           </motion.div>
         </div>
 
