@@ -630,9 +630,9 @@ export function VideoPlayer({
         </div>
 
         {/* Controls */}
-        <div className="flex items-center justify-between mt-4 shrink-0 flex-wrap">
-          {/* Navigation buttons - centered */}
-          <div className="flex-1 flex items-center justify-center gap-3">
+        <div className="relative flex items-center justify-center mt-4 shrink-0">
+          {/* Navigation buttons - truly centered */}
+          <div className="flex items-center gap-3">
             <Button
               variant="outline"
               onClick={onPrevious}
@@ -654,11 +654,11 @@ export function VideoPlayer({
             </Button>
           </div>
 
-          {/* Feedback button - right aligned below Up Next card */}
+          {/* Feedback button - absolute positioned on right */}
           <Button
             variant="outline"
             asChild
-            className={`rounded-xl gap-2 ${isFullscreen ? 'text-base px-5 py-2.5' : ''}`}
+            className={`absolute right-0 rounded-xl gap-2 ${isFullscreen ? 'text-base px-5 py-2.5' : ''}`}
           >
             <a 
               href="https://forms.gle/kpUYadq1GziygP8B7" 
