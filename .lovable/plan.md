@@ -1,56 +1,63 @@
 
-# Plan: Add Google Form Feedback Button Below "Up Next" Card
 
-## Placement
+# Plan: Move Feedback Button Below "Up Next" Card
 
-Based on your preference, the feedback button will be placed in the **controls area below the "Up Next" card**, next to the "Previous" and "Next" buttons. This is the natural location since:
-- It's in the same visual row as navigation controls
-- It doesn't obstruct video content
-- It's easily accessible after watching a video
+## Current State
 
-## Visual Design
+Currently, the layout is:
+```
++----------------------------------+
+|           Video Player           |
+|                                  |
+|                    [Up Next Card]|  <- bottom-right corner INSIDE video
++----------------------------------+
+   [ Previous ]  [ Next ]  [ Feedback ]  <- centered controls below video
+```
 
-The button will:
-- Match the existing "Previous" / "Next" button styling (`variant="outline"`, `rounded-xl`)
-- Include an icon (`ExternalLink` or `MessageSquarePlus`) with "Feedback" text
-- Open the Google Form in a new tab
+## Proposed Layout
+
+The new layout will place the Feedback button on the right side, directly below the "Up Next" card:
+
+```
++----------------------------------+
+|           Video Player           |
+|                                  |
+|                    [Up Next Card]|  <- stays at bottom-right INSIDE video
++----------------------------------+
+   [ Previous ]  [ Next ]          [Feedback]  <- Feedback moves to right side
+```
 
 ## Technical Changes
 
 ### File: `src/components/VideoPlayer.tsx`
 
-**1. Add new import:**
-```tsx
-import { ExternalLink } from 'lucide-react';
-```
+**1. Restructure the controls section (lines 632-669)**
 
-**2. Add Feedback button to the controls section (around line 632):**
+Change from a single centered flex container to a flex container with space-between:
 
-The controls section will change from:
 ```tsx
+// Before (lines 632-669):
 <div className="flex items-center justify-center mt-4 gap-3 shrink-0 flex-wrap">
   <Button ... >Previous</Button>
   <Button ... >Next</Button>
+  <Button ... >Feedback</Button>  {/* Currently inline with nav buttons */}
 </div>
-```
 
-To:
-```tsx
-<div className="flex items-center justify-center mt-4 gap-3 shrink-0 flex-wrap">
-  <Button ... >Previous</Button>
-  <Button ... >Next</Button>
+// After:
+<div className="flex items-center justify-between mt-4 shrink-0 flex-wrap">
+  {/* Left side: Navigation buttons (centered in their space) */}
+  <div className="flex-1 flex items-center justify-center gap-3">
+    <Button ... >Previous</Button>
+    <Button ... >Next</Button>
+  </div>
   
-  {/* Feedback button - opens Google Form */}
+  {/* Right side: Feedback button (aligned to right edge) */}
   <Button
     variant="outline"
     asChild
     className={`rounded-xl gap-2 ${isFullscreen ? 'text-base px-5 py-2.5' : ''}`}
   >
-    <a 
-      href="https://forms.gle/kpUYadq1GziygP8B7" 
-      target="_blank" 
-      rel="noopener noreferrer"
-    >
+    <a href="https://forms.gle/kpUYadq1GziygP8B7" target="_blank" rel="noopener noreferrer">
       <ExternalLink className={isFullscreen ? 'w-5 h-5' : 'w-4 h-4'} />
       <span className="hidden sm:inline">Feedback</span>
     </a>
@@ -58,17 +65,16 @@ To:
 </div>
 ```
 
-## Result
+## Visual Alignment
 
-The controls area will now show:
-```
-[ ← Previous ]  [ Next → ]  [ ↗ Feedback ]
-```
-
-All three buttons will have consistent styling and the feedback button will open your Google Form in a new tab when clicked.
+This approach ensures:
+- The "Previous" and "Next" buttons remain centered in the available space
+- The "Feedback" button aligns to the right edge, directly below where the "Up Next" card appears
+- Consistent spacing and responsive behavior
 
 ## File to Modify
 
-| File | Change |
-|------|--------|
-| `src/components/VideoPlayer.tsx` | Add `ExternalLink` import, add Feedback button in controls section |
+| File | Changes |
+|------|---------|
+| `src/components/VideoPlayer.tsx` | Restructure controls section to use `justify-between` with nested flex containers |
+
