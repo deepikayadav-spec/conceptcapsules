@@ -1,80 +1,59 @@
 
 
-# Plan: Move Feedback Button Below "Up Next" Card
+# Plan: Align Navigation Buttons with Video Player
 
-## Current State
+## Problem
 
-Currently, the layout is:
-```
-+----------------------------------+
-|           Video Player           |
-|                                  |
-|                    [Up Next Card]|  <- bottom-right corner INSIDE video
-+----------------------------------+
-   [ Previous ]  [ Next ]  [ Feedback ]  <- centered controls below video
-```
+Currently, the "Previous" and "Next" buttons are not centered relative to the video player. They're centered in the remaining space after the Feedback button takes its position on the right, causing a visual misalignment.
 
-## Proposed Layout
+## Solution
 
-The new layout will place the Feedback button on the right side, directly below the "Up Next" card:
-
-```
-+----------------------------------+
-|           Video Player           |
-|                                  |
-|                    [Up Next Card]|  <- stays at bottom-right INSIDE video
-+----------------------------------+
-   [ Previous ]  [ Next ]          [Feedback]  <- Feedback moves to right side
-```
+Restructure the controls layout to:
+1. Use absolute positioning for the Feedback button on the right
+2. Center the Previous/Next buttons relative to the full container width
 
 ## Technical Changes
 
 ### File: `src/components/VideoPlayer.tsx`
 
-**1. Restructure the controls section (lines 632-669)**
+**Modify the controls section (lines 632-672)**
 
-Change from a single centered flex container to a flex container with space-between:
-
+Change from:
 ```tsx
-// Before (lines 632-669):
-<div className="flex items-center justify-center mt-4 gap-3 shrink-0 flex-wrap">
-  <Button ... >Previous</Button>
-  <Button ... >Next</Button>
-  <Button ... >Feedback</Button>  {/* Currently inline with nav buttons */}
-</div>
-
-// After:
 <div className="flex items-center justify-between mt-4 shrink-0 flex-wrap">
-  {/* Left side: Navigation buttons (centered in their space) */}
   <div className="flex-1 flex items-center justify-center gap-3">
-    <Button ... >Previous</Button>
-    <Button ... >Next</Button>
+    <Button>Previous</Button>
+    <Button>Next</Button>
+  </div>
+  <Button>Feedback</Button>  {/* Takes up space, shifts center */}
+</div>
+```
+
+To:
+```tsx
+<div className="relative flex items-center justify-center mt-4 shrink-0">
+  {/* Navigation buttons - truly centered */}
+  <div className="flex items-center gap-3">
+    <Button>Previous</Button>
+    <Button>Next</Button>
   </div>
   
-  {/* Right side: Feedback button (aligned to right edge) */}
-  <Button
-    variant="outline"
-    asChild
-    className={`rounded-xl gap-2 ${isFullscreen ? 'text-base px-5 py-2.5' : ''}`}
-  >
-    <a href="https://forms.gle/kpUYadq1GziygP8B7" target="_blank" rel="noopener noreferrer">
-      <ExternalLink className={isFullscreen ? 'w-5 h-5' : 'w-4 h-4'} />
-      <span className="hidden sm:inline">Feedback</span>
-    </a>
+  {/* Feedback button - absolute positioned on right */}
+  <Button className="absolute right-0">
+    Feedback
   </Button>
 </div>
 ```
 
-## Visual Alignment
+## Result
 
-This approach ensures:
-- The "Previous" and "Next" buttons remain centered in the available space
-- The "Feedback" button aligns to the right edge, directly below where the "Up Next" card appears
-- Consistent spacing and responsive behavior
+- Previous and Next buttons will be centered relative to the container
+- Feedback button stays on the right side, aligned below the "Up Next" card
+- No changes to button styling or functionality
 
 ## File to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/VideoPlayer.tsx` | Restructure controls section to use `justify-between` with nested flex containers |
+| `src/components/VideoPlayer.tsx` | Restructure controls section to use relative/absolute positioning |
 
