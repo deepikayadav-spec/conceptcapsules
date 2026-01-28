@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useAdminAnalytics } from '@/hooks/useAdminAnalytics';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -6,7 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ThumbsUp, Star, Users, MessageSquare, Search, ArrowUpDown, Download, RefreshCw } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ThumbsUp, Star, Users, MessageSquare, Search, ArrowUpDown, Download, RefreshCw, ChevronDown, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type SortField = 'likes' | 'avgRating' | 'feedbackCount' | 'byte_name';
@@ -18,7 +20,30 @@ export default function Admin() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState<SortField>('likes');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+  // Create a mapping from fingerprint to anonymized user number
+  const userFingerprintMap = useMemo(() => {
+    const allFingerprints = new Set<string>();
+    videoAnalytics.forEach(video => {
+      video.comments.forEach(c => allFingerprints.add(c.user_fingerprint));
+    });
+    const map = new Map<string, number>();
+    Array.from(allFingerprints).forEach((fp, idx) => map.set(fp, idx + 1));
+    return map;
+  }, [videoAnalytics]);
+
+  const toggleRow = (byteId: string) => {
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(byteId)) {
+        next.delete(byteId);
+      } else {
+        next.add(byteId);
+      }
+      return next;
+    });
+  };
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -262,49 +287,143 @@ export default function Admin() {
                 </TableHeader>
                 <TableBody>
                   {filteredAndSortedVideos.map((video) => (
-                    <TableRow key={video.byte_id}>
-                      <TableCell>
-                        <div className="max-w-[300px]">
-                          <p className="font-medium truncate">{video.byte_name}</p>
-                          <p className="text-xs text-muted-foreground truncate">{video.byte_description}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {video.topics.slice(0, 2).map(topic => (
-                            <Badge key={topic} variant="secondary" className="text-xs">
-                              {topic}
-                            </Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <span className={cn(
-                          "font-medium",
-                          video.likes > 0 ? "text-primary" : "text-muted-foreground"
-                        )}>
-                          {video.likes}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {video.avgRating ? (
-                          <div className="flex items-center justify-center gap-1">
-                            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                            <span className="font-medium">{video.avgRating.toFixed(1)}</span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <span className={cn(
-                          "font-medium",
-                          video.feedbackCount > 0 ? "text-primary" : "text-muted-foreground"
-                        )}>
-                          {video.feedbackCount}
-                        </span>
-                      </TableCell>
-                    </TableRow>
+                    <Collapsible key={video.byte_id} asChild open={expandedRows.has(video.byte_id)}>
+                      <>
+                        <CollapsibleTrigger asChild>
+                          <TableRow 
+                            className="cursor-pointer"
+                            onClick={() => toggleRow(video.byte_id)}
+                          >
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <ChevronDown className={cn(
+                                  "h-4 w-4 transition-transform shrink-0",
+                                  expandedRows.has(video.byte_id) && "rotate-180"
+                                )} />
+                                <div className="max-w-[280px]">
+                                  <p className="font-medium truncate">{video.byte_name}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{video.byte_description}</p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                {video.topics.slice(0, 2).map(topic => (
+                                  <Badge key={topic} variant="secondary" className="text-xs">
+                                    {topic}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <span className={cn(
+                                "font-medium",
+                                video.likes > 0 ? "text-primary" : "text-muted-foreground"
+                              )}>
+                                {video.likes}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {video.avgRating ? (
+                                <div className="flex items-center justify-center gap-1">
+                                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                  <span className="font-medium">{video.avgRating.toFixed(1)}</span>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <span className={cn(
+                                "font-medium",
+                                video.feedbackCount > 0 ? "text-primary" : "text-muted-foreground"
+                              )}>
+                                {video.feedbackCount}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent asChild>
+                          <TableRow className="bg-muted/30 hover:bg-muted/30">
+                            <TableCell colSpan={5} className="p-0">
+                              <div className="p-4 space-y-4">
+                                {/* Rating Distribution */}
+                                {video.feedbackCount > 0 && (
+                                  <div className="space-y-2">
+                                    <p className="text-sm font-medium">Rating Distribution</p>
+                                    <div className="space-y-1.5">
+                                      {[5, 4, 3, 2, 1].map(star => {
+                                        const count = video.ratingDistribution[star] || 0;
+                                        const percentage = video.feedbackCount > 0 
+                                          ? (count / video.feedbackCount) * 100 
+                                          : 0;
+                                        return (
+                                          <div key={star} className="flex items-center gap-2 text-sm">
+                                            <div className="flex items-center gap-0.5 w-20">
+                                              {Array.from({ length: 5 }).map((_, i) => (
+                                                <Star 
+                                                  key={i} 
+                                                  className={cn(
+                                                    "h-3 w-3",
+                                                    i < star ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"
+                                                  )} 
+                                                />
+                                              ))}
+                                            </div>
+                                            <Progress value={percentage} className="flex-1 h-2" />
+                                            <span className="w-16 text-xs text-muted-foreground text-right">
+                                              {count} ({percentage.toFixed(0)}%)
+                                            </span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Individual Ratings */}
+                                {video.comments.length > 0 && (
+                                  <div className="space-y-2">
+                                    <p className="text-sm font-medium">Individual Ratings</p>
+                                    <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                                      {video.comments.map((c, idx) => (
+                                        <div key={idx} className="flex items-start gap-3 p-2 rounded bg-background border text-sm">
+                                          <div className="flex items-center gap-1 text-muted-foreground shrink-0">
+                                            <User className="h-3 w-3" />
+                                            <span className="text-xs">User #{userFingerprintMap.get(c.user_fingerprint)}</span>
+                                          </div>
+                                          <div className="flex items-center gap-0.5 shrink-0">
+                                            {Array.from({ length: 5 }).map((_, i) => (
+                                              <Star 
+                                                key={i} 
+                                                className={cn(
+                                                  "h-3 w-3",
+                                                  i < c.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"
+                                                )} 
+                                              />
+                                            ))}
+                                          </div>
+                                          <span className="text-xs text-muted-foreground shrink-0">
+                                            {new Date(c.created_at).toLocaleString()}
+                                          </span>
+                                          {c.comment && (
+                                            <span className="text-muted-foreground flex-1 truncate">"{c.comment}"</span>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {video.feedbackCount === 0 && (
+                                  <p className="text-sm text-muted-foreground">No ratings yet</p>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        </CollapsibleContent>
+                      </>
+                    </Collapsible>
                   ))}
                 </TableBody>
               </Table>
@@ -338,44 +457,52 @@ export default function Admin() {
           </Card>
         )}
 
-        {/* Recent Comments */}
+        {/* All Ratings */}
         {videoAnalytics.some(v => v.comments.length > 0) && (
           <Card>
             <CardHeader>
-              <CardTitle>Recent Comments</CardTitle>
-              <CardDescription>Latest feedback from users</CardDescription>
+              <CardTitle>All Ratings</CardTitle>
+              <CardDescription>Every rating from all users</CardDescription>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[300px]">
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {videoAnalytics
                     .flatMap(video => 
-                      video.comments
-                        .filter(c => c.comment)
-                        .map(c => ({ ...c, videoName: video.byte_name, byte_id: video.byte_id }))
+                      video.comments.map(c => ({ 
+                        ...c, 
+                        videoName: video.byte_name, 
+                        byte_id: video.byte_id 
+                      }))
                     )
                     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                    .slice(0, 20)
-                    .map((comment, idx) => (
-                      <div key={`${comment.byte_id}-${idx}`} className="p-4 rounded-lg bg-muted/30 border">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="font-medium text-sm">{comment.videoName}</p>
+                    .map((rating, idx) => (
+                      <div key={`${rating.byte_id}-${idx}`} className="p-3 rounded-lg bg-muted/30 border">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="font-medium text-sm">{rating.videoName}</p>
                           <div className="flex items-center gap-1">
                             {Array.from({ length: 5 }).map((_, i) => (
                               <Star 
                                 key={i} 
                                 className={cn(
                                   "h-3 w-3",
-                                  i < comment.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"
+                                  i < rating.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground/30"
                                 )} 
                               />
                             ))}
                           </div>
                         </div>
-                        <p className="text-sm text-muted-foreground">{comment.comment}</p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          {new Date(comment.created_at).toLocaleDateString()}
-                        </p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                          <div className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            <span>User #{userFingerprintMap.get(rating.user_fingerprint)}</span>
+                          </div>
+                          <span>•</span>
+                          <span>{new Date(rating.created_at).toLocaleString()}</span>
+                        </div>
+                        {rating.comment && (
+                          <p className="text-sm text-muted-foreground mt-1">"{rating.comment}"</p>
+                        )}
                       </div>
                     ))}
                 </div>
