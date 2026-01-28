@@ -1,60 +1,74 @@
 
+# Plan: Add Google Form Feedback Button Below "Up Next" Card
 
-# Plan: Improve Video Action Button Text Visibility
+## Placement
 
-## Problem
+Based on your preference, the feedback button will be placed in the **controls area below the "Up Next" card**, next to the "Previous" and "Next" buttons. This is the natural location since:
+- It's in the same visual row as navigation controls
+- It doesn't obstruct video content
+- It's easily accessible after watching a video
 
-The text labels below the Like and Rate buttons (showing the count and "Rate"/"Sent" text) are hard to read because:
-1. **Font size is too small** - Currently using `text-xs` (12px)
-2. **Insufficient text shadow** - Only using `drop-shadow-md` which doesn't provide enough contrast against varying video backgrounds
-3. **No background** - Text floats directly on video content without a backing
+## Visual Design
 
-## Solution
+The button will:
+- Match the existing "Previous" / "Next" button styling (`variant="outline"`, `rounded-xl`)
+- Include an icon (`ExternalLink` or `MessageSquarePlus`) with "Feedback" text
+- Open the Google Form in a new tab
 
-Enhance the text visibility with these styling improvements:
+## Technical Changes
 
-### Changes to `src/components/VideoActions.tsx`
+### File: `src/components/VideoPlayer.tsx`
 
-| Current | Improved |
-|---------|----------|
-| `text-xs` (12px) | `text-sm` (14px) |
-| `drop-shadow-md` | Multi-layer text shadow for better contrast |
-| No background | Add subtle semi-transparent pill background |
-
-### Specific Updates
-
-**Line 65-66 (Like count text):**
-```jsx
-// Before
-<span className="text-xs font-semibold text-white drop-shadow-md">
-
-// After  
-<span className="text-sm font-bold text-white px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-sm"
-  style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.5)' }}>
+**1. Add new import:**
+```tsx
+import { ExternalLink } from 'lucide-react';
 ```
 
-**Line 90-91 (Rate/Sent text):**
-```jsx
-// Before
-<span className="text-xs font-semibold text-white drop-shadow-md">
+**2. Add Feedback button to the controls section (around line 632):**
 
-// After
-<span className="text-sm font-bold text-white px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-sm"
-  style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.5)' }}>
+The controls section will change from:
+```tsx
+<div className="flex items-center justify-center mt-4 gap-3 shrink-0 flex-wrap">
+  <Button ... >Previous</Button>
+  <Button ... >Next</Button>
+</div>
 ```
 
-## Visual Result
+To:
+```tsx
+<div className="flex items-center justify-center mt-4 gap-3 shrink-0 flex-wrap">
+  <Button ... >Previous</Button>
+  <Button ... >Next</Button>
+  
+  {/* Feedback button - opens Google Form */}
+  <Button
+    variant="outline"
+    asChild
+    className={`rounded-xl gap-2 ${isFullscreen ? 'text-base px-5 py-2.5' : ''}`}
+  >
+    <a 
+      href="https://forms.gle/kpUYadq1GziygP8B7" 
+      target="_blank" 
+      rel="noopener noreferrer"
+    >
+      <ExternalLink className={isFullscreen ? 'w-5 h-5' : 'w-4 h-4'} />
+      <span className="hidden sm:inline">Feedback</span>
+    </a>
+  </Button>
+</div>
+```
 
-The text will have:
-- **Larger font** (14px instead of 12px)
-- **Bolder weight** for better readability
-- **Semi-transparent dark pill background** that ensures contrast on any video
-- **Multi-layer text shadow** for additional depth
-- **Backdrop blur** for a modern glass effect
+## Result
+
+The controls area will now show:
+```
+[ ← Previous ]  [ Next → ]  [ ↗ Feedback ]
+```
+
+All three buttons will have consistent styling and the feedback button will open your Google Form in a new tab when clicked.
 
 ## File to Modify
 
-| File | Changes |
-|------|---------|
-| `src/components/VideoActions.tsx` | Update text styling on lines 65 and 90 |
-
+| File | Change |
+|------|--------|
+| `src/components/VideoPlayer.tsx` | Add `ExternalLink` import, add Feedback button in controls section |
