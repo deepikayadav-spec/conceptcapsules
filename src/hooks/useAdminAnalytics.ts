@@ -11,10 +11,12 @@ interface VideoFeedback {
   byte_id: string;
   count: number;
   avgRating: number;
+  ratingDistribution: { [key: number]: number };
   comments: Array<{
     rating: number;
     comment: string | null;
     created_at: string;
+    user_fingerprint: string;
   }>;
 }
 
@@ -67,16 +69,26 @@ export function useAdminAnalytics() {
       }));
 
       // Aggregate feedback by byte_id
-      const feedbackMap = new Map<string, { ratings: number[]; comments: Array<{ rating: number; comment: string | null; created_at: string }> }>();
+      const feedbackMap = new Map<string, { 
+        ratings: number[]; 
+        ratingDistribution: { [key: number]: number };
+        comments: Array<{ rating: number; comment: string | null; created_at: string; user_fingerprint: string }> 
+      }>();
       const uniqueUsersFromFeedback = new Set<string>();
 
       feedbackData?.forEach(fb => {
-        const existing = feedbackMap.get(fb.byte_id) || { ratings: [], comments: [] };
+        const existing = feedbackMap.get(fb.byte_id) || { 
+          ratings: [], 
+          ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+          comments: [] 
+        };
         existing.ratings.push(fb.rating);
+        existing.ratingDistribution[fb.rating] = (existing.ratingDistribution[fb.rating] || 0) + 1;
         existing.comments.push({
           rating: fb.rating,
           comment: fb.comment,
-          created_at: fb.created_at
+          created_at: fb.created_at,
+          user_fingerprint: fb.user_fingerprint
         });
         feedbackMap.set(fb.byte_id, existing);
         uniqueUsersFromFeedback.add(fb.user_fingerprint);
@@ -86,6 +98,7 @@ export function useAdminAnalytics() {
         byte_id,
         count: data.ratings.length,
         avgRating: data.ratings.reduce((a, b) => a + b, 0) / data.ratings.length,
+        ratingDistribution: data.ratingDistribution,
         comments: data.comments.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       }));
 
@@ -138,6 +151,7 @@ export function useAdminAnalytics() {
         likes: likeData?.count || 0,
         feedbackCount: feedbackData?.count || 0,
         avgRating: feedbackData?.avgRating || null,
+        ratingDistribution: feedbackData?.ratingDistribution || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
         comments: feedbackData?.comments || []
       };
     });
