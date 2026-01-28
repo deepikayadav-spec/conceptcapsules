@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ThumbsUp, Star, Users, MessageSquare, Search, ArrowUpDown, Copy, Check } from 'lucide-react';
+import { ThumbsUp, Star, Users, MessageSquare, Search, ArrowUpDown, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type SortField = 'likes' | 'avgRating' | 'feedbackCount' | 'byte_name';
@@ -17,7 +17,7 @@ export default function Admin() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState<SortField>('likes');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const [copied, setCopied] = useState(false);
+  
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -65,9 +65,10 @@ export default function Admin() {
     });
 
   const exportToCSV = () => {
-    const headers = ['Video Name', 'Topics', 'Likes', 'Avg Rating', 'Feedback Count'];
+    const headers = ['Video Name', 'Description', 'Topics', 'Likes', 'Avg Rating', 'Feedback Count'];
     const rows = filteredAndSortedVideos.map(video => [
       `"${video.byte_name}"`,
+      `"${video.byte_description.replace(/"/g, '""')}"`,
       `"${video.topics.join(', ')}"`,
       video.likes,
       video.avgRating?.toFixed(1) || 'N/A',
@@ -75,9 +76,17 @@ export default function Admin() {
     ]);
 
     const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    navigator.clipboard.writeText(csv);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    
+    // Create and download the file
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `video-analytics-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   if (loading) {
@@ -112,8 +121,8 @@ export default function Admin() {
             onClick={exportToCSV}
             className="gap-2"
           >
-            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-            {copied ? 'Copied!' : 'Export CSV'}
+            <Download className="w-4 h-4" />
+            Export CSV
           </Button>
         </div>
 
