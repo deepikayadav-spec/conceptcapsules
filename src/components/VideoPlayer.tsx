@@ -10,7 +10,8 @@ import {
   FileText,
   Play,
   Pause,
-  RotateCcw
+  RotateCcw,
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TopicBadge } from '@/components/TopicBadge';
@@ -648,6 +649,22 @@ export function VideoPlayer({
           >
             <span className="hidden sm:inline">Next</span>
             <ChevronRight className={isFullscreen ? 'w-5 h-5' : 'w-4 h-4'} />
+          </Button>
+
+          {/* Feedback button - opens Google Form */}
+          <Button
+            variant="outline"
+            asChild
+            className={`rounded-xl gap-2 ${isFullscreen ? 'text-base px-5 py-2.5' : ''}`}
+          >
+            <a 
+              href="https://forms.gle/kpUYadq1GziygP8B7" 
+              target="_blank" 
+              rel="noopener noreferrer"
+            >
+              <ExternalLink className={isFullscreen ? 'w-5 h-5' : 'w-4 h-4'} />
+              <span className="hidden sm:inline">Feedback</span>
+            </a>
           </Button>
         </div>
 
