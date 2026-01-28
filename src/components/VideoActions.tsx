@@ -62,7 +62,10 @@ export function VideoActions({ byteId }: VideoActionsProps) {
               )}
             />
           </div>
-          <span className="text-xs font-semibold text-white drop-shadow-md">
+          <span 
+            className="text-sm font-bold text-white px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-sm"
+            style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.5)' }}
+          >
             {formatCount(likesCount)}
           </span>
         </motion.button>
@@ -87,7 +90,10 @@ export function VideoActions({ byteId }: VideoActionsProps) {
               )}
             />
           </div>
-          <span className="text-xs font-semibold text-white drop-shadow-md">
+          <span 
+            className="text-sm font-bold text-white px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-sm"
+            style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.5)' }}
+          >
             {userFeedback ? 'Sent' : 'Rate'}
           </span>
         </motion.button>
