@@ -6,14 +6,15 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ThumbsUp, Star, Users, MessageSquare, Search, ArrowUpDown, Download } from 'lucide-react';
+import { ThumbsUp, Star, Users, MessageSquare, Search, ArrowUpDown, Download, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type SortField = 'likes' | 'avgRating' | 'feedbackCount' | 'byte_name';
 type SortDirection = 'asc' | 'desc';
 
 export default function Admin() {
-  const { analytics, videoAnalytics, loading, error } = useAdminAnalytics();
+  const { analytics, videoAnalytics, loading, error, refresh } = useAdminAnalytics();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState<SortField>('likes');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -116,14 +117,29 @@ export default function Admin() {
             <h1 className="text-3xl font-bold text-foreground">Admin Analytics</h1>
             <p className="text-muted-foreground mt-1">Video engagement and feedback overview</p>
           </div>
-          <Button 
-            variant="outline" 
-            onClick={exportToCSV}
-            className="gap-2"
-          >
-            <Download className="w-4 h-4" />
-            Export CSV
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={async () => {
+                setIsRefreshing(true);
+                await refresh();
+                setIsRefreshing(false);
+              }}
+              disabled={isRefreshing}
+              className="gap-2"
+            >
+              <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={exportToCSV}
+              className="gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
