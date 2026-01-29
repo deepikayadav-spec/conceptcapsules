@@ -658,7 +658,7 @@ export function VideoPlayer({
           <Button
             variant="outline"
             asChild
-            className={`absolute right-0 rounded-xl gap-2 border-[#5FBDB8] text-[#2E8F8A] bg-transparent hover:bg-[#E6F6F5] hover:border-[#5FBDB8] cursor-pointer ${isFullscreen ? 'text-base px-5 py-2.5' : ''}`}
+            className={`absolute right-0 rounded-xl gap-2 border-[#5FBDB8] text-[#2E8F8A] bg-[#E6F6F5] hover:bg-[#D0EDEB] hover:border-[#5FBDB8] cursor-pointer ${isFullscreen ? 'text-base px-5 py-2.5' : ''}`}
           >
             <a 
               href="https://forms.gle/kpUYadq1GziygP8B7" 
