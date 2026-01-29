@@ -658,15 +658,15 @@ export function VideoPlayer({
           <Button
             variant="outline"
             asChild
-            className={`absolute right-0 rounded-xl gap-2 border-[#5FBDB8] text-[#2E8F8A] bg-[#E6F6F5] hover:bg-[#D0EDEB] hover:border-[#5FBDB8] cursor-pointer ${isFullscreen ? 'text-base px-5 py-2.5' : ''}`}
+            className={`absolute right-0 rounded-xl gap-2 border-primary/50 text-primary bg-accent hover:bg-accent/80 hover:border-primary cursor-pointer ${isFullscreen ? 'text-base px-5 py-2.5' : ''}`}
           >
             <a 
               href="https://forms.gle/kpUYadq1GziygP8B7" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-[#2E8F8A]"
+              className="text-primary"
             >
-              <ExternalLink className={`text-[#2E8F8A] ${isFullscreen ? 'w-5 h-5' : 'w-4 h-4'}`} />
+              <ExternalLink className={`text-primary ${isFullscreen ? 'w-5 h-5' : 'w-4 h-4'}`} />
               <span className="hidden sm:inline">Feedback</span>
             </a>
           </Button>
