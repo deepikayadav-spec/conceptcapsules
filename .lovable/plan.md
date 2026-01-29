@@ -1,35 +1,56 @@
 
-# Plan: Fill Feedback Button with Light Teal Background
+# Plan: Fix Feedback Button Visibility in Dark Mode
 
-## Change
+## Problem
 
-Update the Feedback button to have the light teal shade (`#E6F6F5`) as the default background color instead of transparent.
+The Feedback button uses hardcoded light teal colors that work in light mode but cause visibility issues in dark mode:
+- Current background: `#E6F6F5` (light teal) - too bright in dark mode
+- Current hover: `#D0EDEB` (light teal) - still too bright
+- Current text: `#2E8F8A` (dark teal) - becomes invisible against light backgrounds in dark mode
+
+## Solution
+
+Replace hardcoded colors with theme-aware Tailwind CSS classes that adapt to light/dark mode, matching the left panel's styling approach.
 
 ## Technical Details
 
 ### File: `src/components/VideoPlayer.tsx`
 
-**Line 661 - Change the button className:**
+**Line 661 - Update the button className:**
 
-| Property | Current | New |
-|----------|---------|-----|
-| Background | `bg-transparent` | `bg-[#E6F6F5]` |
-| Hover Background | `hover:bg-[#E6F6F5]` | `hover:bg-[#D0EDEB]` (slightly darker for hover feedback) |
+| Property | Current (Broken) | New (Theme-Aware) |
+|----------|------------------|-------------------|
+| Background | `bg-[#E6F6F5]` | `bg-accent` |
+| Hover Background | `hover:bg-[#D0EDEB]` | `hover:bg-accent/80` |
+| Border | `border-[#5FBDB8]` | `border-primary/50` |
+| Hover Border | `hover:border-[#5FBDB8]` | `hover:border-primary` |
+| Text | `text-[#2E8F8A]` | `text-primary` |
 
-The updated className will be:
-```tsx
-className={`absolute right-0 rounded-xl gap-2 border-[#5FBDB8] text-[#2E8F8A] bg-[#E6F6F5] hover:bg-[#D0EDEB] hover:border-[#5FBDB8] cursor-pointer ${isFullscreen ? 'text-base px-5 py-2.5' : ''}`}
-```
+**Also update the anchor and icon classes (lines 667-669):**
+- Change `className="text-[#2E8F8A]"` on anchor to `className="text-primary"`
+- Change `text-[#2E8F8A]` on ExternalLink icon to `text-primary`
+
+### CSS Variable Values
+
+These Tailwind classes use the theme-aware CSS variables:
+
+**Light Mode:**
+- `accent`: `hsl(174 72% 90%)` - light teal background
+- `primary`: `hsl(174 72% 40%)` - teal text/border
+
+**Dark Mode:**
+- `accent`: `hsl(174 72% 20%)` - dark teal background (readable)
+- `primary`: `hsl(174 72% 50%)` - bright teal text/border (visible)
 
 ## Result
 
-- Button will have a soft light teal fill by default
-- Hover state will darken slightly to provide visual feedback
-- Border and text colors remain unchanged (`#5FBDB8` and `#2E8F8A`)
-- Button still appears secondary/optional compared to primary solid CTAs
+- Button automatically adapts to light and dark mode
+- Text remains visible in both themes
+- Styling matches the teal accent colors used elsewhere in the app
+- Maintains the same visual hierarchy (secondary/optional button appearance)
 
 ## File to Modify
 
 | File | Change |
 |------|--------|
-| `src/components/VideoPlayer.tsx` | Update line 661: change `bg-transparent` to `bg-[#E6F6F5]` and adjust hover state |
+| `src/components/VideoPlayer.tsx` | Update lines 661-669: Replace hardcoded hex colors with theme-aware Tailwind classes |
