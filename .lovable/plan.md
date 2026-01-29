@@ -1,59 +1,35 @@
 
+# Plan: Fill Feedback Button with Light Teal Background
 
-# Plan: Align Navigation Buttons with Video Player
+## Change
 
-## Problem
+Update the Feedback button to have the light teal shade (`#E6F6F5`) as the default background color instead of transparent.
 
-Currently, the "Previous" and "Next" buttons are not centered relative to the video player. They're centered in the remaining space after the Feedback button takes its position on the right, causing a visual misalignment.
-
-## Solution
-
-Restructure the controls layout to:
-1. Use absolute positioning for the Feedback button on the right
-2. Center the Previous/Next buttons relative to the full container width
-
-## Technical Changes
+## Technical Details
 
 ### File: `src/components/VideoPlayer.tsx`
 
-**Modify the controls section (lines 632-672)**
+**Line 661 - Change the button className:**
 
-Change from:
-```tsx
-<div className="flex items-center justify-between mt-4 shrink-0 flex-wrap">
-  <div className="flex-1 flex items-center justify-center gap-3">
-    <Button>Previous</Button>
-    <Button>Next</Button>
-  </div>
-  <Button>Feedback</Button>  {/* Takes up space, shifts center */}
-</div>
-```
+| Property | Current | New |
+|----------|---------|-----|
+| Background | `bg-transparent` | `bg-[#E6F6F5]` |
+| Hover Background | `hover:bg-[#E6F6F5]` | `hover:bg-[#D0EDEB]` (slightly darker for hover feedback) |
 
-To:
+The updated className will be:
 ```tsx
-<div className="relative flex items-center justify-center mt-4 shrink-0">
-  {/* Navigation buttons - truly centered */}
-  <div className="flex items-center gap-3">
-    <Button>Previous</Button>
-    <Button>Next</Button>
-  </div>
-  
-  {/* Feedback button - absolute positioned on right */}
-  <Button className="absolute right-0">
-    Feedback
-  </Button>
-</div>
+className={`absolute right-0 rounded-xl gap-2 border-[#5FBDB8] text-[#2E8F8A] bg-[#E6F6F5] hover:bg-[#D0EDEB] hover:border-[#5FBDB8] cursor-pointer ${isFullscreen ? 'text-base px-5 py-2.5' : ''}`}
 ```
 
 ## Result
 
-- Previous and Next buttons will be centered relative to the container
-- Feedback button stays on the right side, aligned below the "Up Next" card
-- No changes to button styling or functionality
+- Button will have a soft light teal fill by default
+- Hover state will darken slightly to provide visual feedback
+- Border and text colors remain unchanged (`#5FBDB8` and `#2E8F8A`)
+- Button still appears secondary/optional compared to primary solid CTAs
 
 ## File to Modify
 
-| File | Changes |
-|------|---------|
-| `src/components/VideoPlayer.tsx` | Restructure controls section to use relative/absolute positioning |
-
+| File | Change |
+|------|--------|
+| `src/components/VideoPlayer.tsx` | Update line 661: change `bg-transparent` to `bg-[#E6F6F5]` and adjust hover state |
