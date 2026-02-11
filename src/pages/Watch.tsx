@@ -8,6 +8,7 @@ import { useBytes } from '@/hooks/useBytes';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useVideoProgress } from '@/hooks/useVideoProgress';
+import { useSessionTracker } from '@/hooks/useSessionTracker';
 import { WatchState, STORAGE_KEY, Byte } from '@/types/byte';
 import { Loader2 } from 'lucide-react';
 import {
@@ -32,6 +33,9 @@ export default function Watch() {
   const [autoStartVideo, setAutoStartVideo] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Track user session
+  useSessionTracker();
   
   // Progress tracking
   const { 

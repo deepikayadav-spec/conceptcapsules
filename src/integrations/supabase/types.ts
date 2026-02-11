@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      user_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          last_active_at: string
+          source: string
+          user_identifier: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_active_at?: string
+          source?: string
+          user_identifier: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_active_at?: string
+          source?: string
+          user_identifier?: string
+        }
+        Relationships: []
+      }
       video_feedback: {
         Row: {
           byte_id: string
