@@ -7,12 +7,14 @@ import Home from "./pages/Home";
 import Watch from "./pages/Watch";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import { useSessionTracker } from "./hooks/useSessionTracker";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
+function AppContent() {
+  useSessionTracker();
+  return (
+    <>
       <Toaster />
       <Sonner />
       <BrowserRouter>
@@ -20,10 +22,17 @@ const App = () => (
           <Route path="/" element={<Home />} />
           <Route path="/watch" element={<Watch />} />
           <Route path="/admin" element={<Admin />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
+    </>
+  );
+}
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <AppContent />
     </TooltipProvider>
   </QueryClientProvider>
 );
