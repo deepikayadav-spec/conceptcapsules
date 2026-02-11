@@ -26,6 +26,9 @@ interface AnalyticsData {
   totalLikes: number;
   totalFeedback: number;
   totalUniqueUsers: number;
+  activeUsers: number;
+  portalUsers: number;
+  directUsers: number;
   overallAvgRating: number;
 }
 
@@ -105,10 +108,28 @@ export function useAdminAnalytics() {
       // Calculate totals
       const totalLikes = likesData?.length || 0;
       const totalFeedback = feedbackData?.length || 0;
-      
-      // Combine unique users
-      const allUniqueUsers = new Set([...uniqueUsersFromLikes, ...uniqueUsersFromFeedback]);
-      const totalUniqueUsers = allUniqueUsers.size;
+
+      // Fetch session data for accurate user counts
+      const { data: sessionsData, error: sessionsError } = await supabase
+        .from('user_sessions')
+        .select('user_identifier, source, last_active_at');
+
+      let totalUniqueUsers = 0;
+      let activeUsers = 0;
+      let portalUsers = 0;
+      let directUsers = 0;
+
+      if (!sessionsError && sessionsData) {
+        totalUniqueUsers = sessionsData.length;
+        const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+        activeUsers = sessionsData.filter(s => s.last_active_at > thirtyMinAgo).length;
+        portalUsers = sessionsData.filter(s => s.source === 'portal').length;
+        directUsers = sessionsData.filter(s => s.source === 'fingerprint').length;
+      } else {
+        // Fallback to old method
+        const allUniqueUsers = new Set([...uniqueUsersFromLikes, ...uniqueUsersFromFeedback]);
+        totalUniqueUsers = allUniqueUsers.size;
+      }
 
       // Overall average rating
       const allRatings = feedbackData?.map(fb => fb.rating) || [];
@@ -122,6 +143,9 @@ export function useAdminAnalytics() {
         totalLikes,
         totalFeedback,
         totalUniqueUsers,
+        activeUsers,
+        portalUsers,
+        directUsers,
         overallAvgRating
       });
     } catch (err) {

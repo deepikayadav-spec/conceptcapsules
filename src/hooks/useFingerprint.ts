@@ -31,20 +31,76 @@ function generateFingerprint(): string {
   return Math.abs(hash).toString(36);
 }
 
-export function useFingerprint() {
-  const [fingerprint, setFingerprint] = useState<string>('');
+interface UserIdentity {
+  identifier: string;
+  source: 'portal' | 'fingerprint';
+}
+
+export function useFingerprint(): string {
+  const [identity, setIdentity] = useState<UserIdentity>({ identifier: '', source: 'fingerprint' });
 
   useEffect(() => {
-    // Check localStorage first
-    const stored = localStorage.getItem('user_fingerprint');
-    if (stored) {
-      setFingerprint(stored);
+    // Check if we already have a portal userId stored
+    const storedPortalId = localStorage.getItem('portal_user_id');
+    if (storedPortalId) {
+      setIdentity({ identifier: storedPortalId, source: 'portal' });
     } else {
-      const fp = generateFingerprint();
-      localStorage.setItem('user_fingerprint', fp);
-      setFingerprint(fp);
+      // Fall back to fingerprint
+      const stored = localStorage.getItem('user_fingerprint');
+      if (stored) {
+        setIdentity({ identifier: stored, source: 'fingerprint' });
+      } else {
+        const fp = generateFingerprint();
+        localStorage.setItem('user_fingerprint', fp);
+        setIdentity({ identifier: fp, source: 'fingerprint' });
+      }
     }
+
+    // Listen for postMessage from parent portal
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'SET_USER_ID' && typeof event.data.userId === 'string') {
+        const userId = event.data.userId;
+        localStorage.setItem('portal_user_id', userId);
+        setIdentity({ identifier: userId, source: 'portal' });
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  return fingerprint;
+  return identity.identifier;
+}
+
+export function useUserIdentity(): UserIdentity {
+  const [identity, setIdentity] = useState<UserIdentity>({ identifier: '', source: 'fingerprint' });
+
+  useEffect(() => {
+    const storedPortalId = localStorage.getItem('portal_user_id');
+    if (storedPortalId) {
+      setIdentity({ identifier: storedPortalId, source: 'portal' });
+    } else {
+      const stored = localStorage.getItem('user_fingerprint');
+      if (stored) {
+        setIdentity({ identifier: stored, source: 'fingerprint' });
+      } else {
+        const fp = generateFingerprint();
+        localStorage.setItem('user_fingerprint', fp);
+        setIdentity({ identifier: fp, source: 'fingerprint' });
+      }
+    }
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'SET_USER_ID' && typeof event.data.userId === 'string') {
+        const userId = event.data.userId;
+        localStorage.setItem('portal_user_id', userId);
+        setIdentity({ identifier: userId, source: 'portal' });
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  return identity;
 }

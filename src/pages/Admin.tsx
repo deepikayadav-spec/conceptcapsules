@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ThumbsUp, Star, Users, MessageSquare, Search, ArrowUpDown, Download, RefreshCw, ChevronDown, User } from 'lucide-react';
+import { ThumbsUp, Star, Users, MessageSquare, Search, ArrowUpDown, Download, RefreshCw, ChevronDown, User, Activity, Globe, Monitor } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type SortField = 'likes' | 'avgRating' | 'feedbackCount' | 'byte_name';
@@ -168,7 +168,7 @@ export default function Admin() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Unique Users</CardTitle>
@@ -176,7 +176,22 @@ export default function Admin() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{analytics?.totalUniqueUsers || 0}</div>
-              <p className="text-xs text-muted-foreground">Based on browser fingerprints</p>
+              <p className="text-xs text-muted-foreground">
+                {(analytics?.portalUsers || 0) > 0 
+                  ? `${analytics?.portalUsers} portal · ${analytics?.directUsers} direct`
+                  : 'All visitors tracked'}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Now</CardTitle>
+              <Activity className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-500">{analytics?.activeUsers || 0}</div>
+              <p className="text-xs text-muted-foreground">Active in last 30 min</p>
             </CardContent>
           </Card>
 
