@@ -1,75 +1,55 @@
 
 
-# Plan: Track Active Users and Integrate Portal Student IDs via postMessage
+# Fix: Active Users and Total Unique Users Showing 0
 
-## Problem
+## Root Cause
 
-1. **Unique user count only tracks engaged users** - Currently, unique users are counted only from `video_likes` and `video_feedback` tables. A student who watches videos but never likes or leaves feedback is invisible in analytics.
-2. **Browser fingerprints are unreliable** - Different browsers/devices generate different fingerprints for the same student, and same-device students get the same fingerprint.
-3. **No way to identify students from the parent portal** - The portal knows who the student is, but Concept Capsule doesn't receive that identity.
+Two issues are causing the numbers to drop to 0:
 
-## Solution
+1. **Session table is empty**: The `useSessionTracker` hook only runs on the `/watch` page. Since the table was just created, no one has visited `/watch` yet, so there are 0 session records.
 
-### 1. Accept Student ID via postMessage from Parent Portal
+2. **Broken fallback logic**: When the session query succeeds but returns an empty array, the code uses `sessionsData.length = 0` instead of falling back to the old method of counting unique users from likes and feedback data. The fallback only triggers on a database error, not on empty results.
 
-When Concept Capsule loads inside an iframe on your portal, the portal can send the student's userId using the browser's `postMessage` API. Concept Capsule will listen for this message and use it as the user identifier instead of the browser fingerprint.
+## Changes
 
-**Your portal just needs to add this code:**
-```javascript
-// After the iframe loads
-iframe.contentWindow.postMessage({ type: 'SET_USER_ID', userId: 'student123' }, '*');
+### 1. Fix fallback in `useAdminAnalytics.ts`
+
+Update the condition so that when `sessionsData` is empty, it falls back to counting unique users from likes + feedback (the old working method). Also combine both data sources: use session data when available, but always include users from engagement data too.
+
+**Current (broken):**
+```typescript
+if (!sessionsError && sessionsData) {
+  totalUniqueUsers = sessionsData.length;  // 0 when empty
+  ...
+} else {
+  // Only runs on error, never on empty results
+  const allUniqueUsers = new Set([...uniqueUsersFromLikes, ...uniqueUsersFromFeedback]);
+  totalUniqueUsers = allUniqueUsers.size;
+}
 ```
 
-### 2. New Database Table: `user_sessions`
+**Fixed:**
+```typescript
+if (!sessionsError && sessionsData && sessionsData.length > 0) {
+  // Use session data, but also merge in engagement-only users
+  const sessionIdentifiers = new Set(sessionsData.map(s => s.user_identifier));
+  const engagementUsers = new Set([...uniqueUsersFromLikes, ...uniqueUsersFromFeedback]);
+  const allUsers = new Set([...sessionIdentifiers, ...engagementUsers]);
+  totalUniqueUsers = allUsers.size;
+  // ... active/portal/direct counts from sessions
+} else {
+  // Fallback: count from engagement data
+  const allUniqueUsers = new Set([...uniqueUsersFromLikes, ...uniqueUsersFromFeedback]);
+  totalUniqueUsers = allUniqueUsers.size;
+}
+```
 
-Track every visit so we can count all users, not just those who like/comment.
+### 2. Add session tracking to more pages
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Primary key |
-| user_identifier | text | userId from portal OR browser fingerprint |
-| source | text | "portal" or "fingerprint" |
-| last_active_at | timestamptz | Updated on each visit/interaction |
-| created_at | timestamptz | First visit |
+Currently `useSessionTracker()` only runs on the Watch page. Add it to the main app entry point so every visitor is tracked regardless of which page they land on.
 
-### 3. Updated Admin Dashboard
-
-- **Total Unique Users** card will count from `user_sessions` (all visitors, not just engaged ones)
-- New **Active Users** card showing users active in the last 30 minutes
-- Source badge showing whether user came from portal or direct access
-
-## Technical Changes
-
-### Step 1: Create `user_sessions` table
-- Database migration to create the table with RLS policies (public insert/select, no auth required)
-
-### Step 2: Update `useFingerprint.ts`
-- Add a `postMessage` listener for `{ type: 'SET_USER_ID', userId: string }`
-- If received, store the portal userId in localStorage and use it as the identifier
-- Fall back to browser fingerprint if no postMessage is received
-- Record/update a session in `user_sessions` table whenever the identifier is set
-
-### Step 3: Create `useSessionTracker.ts` hook
-- On app load, upsert a row in `user_sessions` with the current user identifier
-- Update `last_active_at` periodically (every 5 minutes) to track "active" status
-
-### Step 4: Update `useAdminAnalytics.ts`
-- Fetch from `user_sessions` to get total unique users and currently active users
-- Replace the fingerprint-only count with session-based count
-
-### Step 5: Update `Admin.tsx`
-- Add "Active Now" stat card (users active in last 30 min)
-- Update "Total Unique Users" to use session data
-- Show source breakdown (portal vs direct)
-
-## Files to Create/Modify
-
-| File | Action |
+| File | Change |
 |------|--------|
-| Database migration | Create `user_sessions` table |
-| `src/hooks/useFingerprint.ts` | Add postMessage listener for portal userId |
-| `src/hooks/useSessionTracker.ts` | New hook to record/update sessions |
-| `src/hooks/useAdminAnalytics.ts` | Fetch session data for user counts |
-| `src/pages/Admin.tsx` | Add Active Users card, update Unique Users card |
-| `src/pages/Watch.tsx` | Use session tracker hook |
+| `src/hooks/useAdminAnalytics.ts` | Fix fallback logic to handle empty session data and merge engagement users |
+| `src/App.tsx` | Add `useSessionTracker()` at app level so all visitors are tracked |
 
