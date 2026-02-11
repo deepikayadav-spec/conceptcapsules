@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useAdminAnalytics } from '@/hooks/useAdminAnalytics';
+import { ActivityChart } from '@/components/ActivityChart';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -230,6 +231,9 @@ export default function Admin() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Active Users Over Time Chart */}
+        <ActivityChart data={analytics?.activityTimeline || []} />
 
         {/* Search and Filter */}
         <div className="flex items-center gap-4">
