@@ -1,56 +1,75 @@
 
-# Plan: Fix Feedback Button Visibility in Dark Mode
+
+# Plan: Track Active Users and Integrate Portal Student IDs via postMessage
 
 ## Problem
 
-The Feedback button uses hardcoded light teal colors that work in light mode but cause visibility issues in dark mode:
-- Current background: `#E6F6F5` (light teal) - too bright in dark mode
-- Current hover: `#D0EDEB` (light teal) - still too bright
-- Current text: `#2E8F8A` (dark teal) - becomes invisible against light backgrounds in dark mode
+1. **Unique user count only tracks engaged users** - Currently, unique users are counted only from `video_likes` and `video_feedback` tables. A student who watches videos but never likes or leaves feedback is invisible in analytics.
+2. **Browser fingerprints are unreliable** - Different browsers/devices generate different fingerprints for the same student, and same-device students get the same fingerprint.
+3. **No way to identify students from the parent portal** - The portal knows who the student is, but Concept Capsule doesn't receive that identity.
 
 ## Solution
 
-Replace hardcoded colors with theme-aware Tailwind CSS classes that adapt to light/dark mode, matching the left panel's styling approach.
+### 1. Accept Student ID via postMessage from Parent Portal
 
-## Technical Details
+When Concept Capsule loads inside an iframe on your portal, the portal can send the student's userId using the browser's `postMessage` API. Concept Capsule will listen for this message and use it as the user identifier instead of the browser fingerprint.
 
-### File: `src/components/VideoPlayer.tsx`
+**Your portal just needs to add this code:**
+```javascript
+// After the iframe loads
+iframe.contentWindow.postMessage({ type: 'SET_USER_ID', userId: 'student123' }, '*');
+```
 
-**Line 661 - Update the button className:**
+### 2. New Database Table: `user_sessions`
 
-| Property | Current (Broken) | New (Theme-Aware) |
-|----------|------------------|-------------------|
-| Background | `bg-[#E6F6F5]` | `bg-accent` |
-| Hover Background | `hover:bg-[#D0EDEB]` | `hover:bg-accent/80` |
-| Border | `border-[#5FBDB8]` | `border-primary/50` |
-| Hover Border | `hover:border-[#5FBDB8]` | `hover:border-primary` |
-| Text | `text-[#2E8F8A]` | `text-primary` |
+Track every visit so we can count all users, not just those who like/comment.
 
-**Also update the anchor and icon classes (lines 667-669):**
-- Change `className="text-[#2E8F8A]"` on anchor to `className="text-primary"`
-- Change `text-[#2E8F8A]` on ExternalLink icon to `text-primary`
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| user_identifier | text | userId from portal OR browser fingerprint |
+| source | text | "portal" or "fingerprint" |
+| last_active_at | timestamptz | Updated on each visit/interaction |
+| created_at | timestamptz | First visit |
 
-### CSS Variable Values
+### 3. Updated Admin Dashboard
 
-These Tailwind classes use the theme-aware CSS variables:
+- **Total Unique Users** card will count from `user_sessions` (all visitors, not just engaged ones)
+- New **Active Users** card showing users active in the last 30 minutes
+- Source badge showing whether user came from portal or direct access
 
-**Light Mode:**
-- `accent`: `hsl(174 72% 90%)` - light teal background
-- `primary`: `hsl(174 72% 40%)` - teal text/border
+## Technical Changes
 
-**Dark Mode:**
-- `accent`: `hsl(174 72% 20%)` - dark teal background (readable)
-- `primary`: `hsl(174 72% 50%)` - bright teal text/border (visible)
+### Step 1: Create `user_sessions` table
+- Database migration to create the table with RLS policies (public insert/select, no auth required)
 
-## Result
+### Step 2: Update `useFingerprint.ts`
+- Add a `postMessage` listener for `{ type: 'SET_USER_ID', userId: string }`
+- If received, store the portal userId in localStorage and use it as the identifier
+- Fall back to browser fingerprint if no postMessage is received
+- Record/update a session in `user_sessions` table whenever the identifier is set
 
-- Button automatically adapts to light and dark mode
-- Text remains visible in both themes
-- Styling matches the teal accent colors used elsewhere in the app
-- Maintains the same visual hierarchy (secondary/optional button appearance)
+### Step 3: Create `useSessionTracker.ts` hook
+- On app load, upsert a row in `user_sessions` with the current user identifier
+- Update `last_active_at` periodically (every 5 minutes) to track "active" status
 
-## File to Modify
+### Step 4: Update `useAdminAnalytics.ts`
+- Fetch from `user_sessions` to get total unique users and currently active users
+- Replace the fingerprint-only count with session-based count
 
-| File | Change |
+### Step 5: Update `Admin.tsx`
+- Add "Active Now" stat card (users active in last 30 min)
+- Update "Total Unique Users" to use session data
+- Show source breakdown (portal vs direct)
+
+## Files to Create/Modify
+
+| File | Action |
 |------|--------|
-| `src/components/VideoPlayer.tsx` | Update lines 661-669: Replace hardcoded hex colors with theme-aware Tailwind classes |
+| Database migration | Create `user_sessions` table |
+| `src/hooks/useFingerprint.ts` | Add postMessage listener for portal userId |
+| `src/hooks/useSessionTracker.ts` | New hook to record/update sessions |
+| `src/hooks/useAdminAnalytics.ts` | Fetch session data for user counts |
+| `src/pages/Admin.tsx` | Add Active Users card, update Unique Users card |
+| `src/pages/Watch.tsx` | Use session tracker hook |
+
