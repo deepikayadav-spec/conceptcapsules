@@ -34,6 +34,13 @@ export function useSessionTracker() {
               last_active_at: new Date().toISOString(),
             });
         }
+
+        // Record activity snapshot for timeline graph
+        await supabase
+          .from('activity_snapshots')
+          .insert({
+            user_identifier: identity.identifier,
+          });
       } catch (err) {
         console.error('Session tracking error:', err);
       }

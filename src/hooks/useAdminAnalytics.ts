@@ -20,6 +20,11 @@ interface VideoFeedback {
   }>;
 }
 
+interface ActivityTimelinePoint {
+  time: string;
+  activeUsers: number;
+}
+
 interface AnalyticsData {
   likes: VideoLike[];
   feedback: VideoFeedback[];
@@ -30,6 +35,7 @@ interface AnalyticsData {
   portalUsers: number;
   directUsers: number;
   overallAvgRating: number;
+  activityTimeline: ActivityTimelinePoint[];
 }
 
 export function useAdminAnalytics() {
@@ -141,6 +147,37 @@ export function useAdminAnalytics() {
         ? allRatings.reduce((a, b) => a + b, 0) / allRatings.length 
         : 0;
 
+      // Fetch activity snapshots for timeline (last 7 days max)
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: snapshotsData } = await supabase
+        .from('activity_snapshots')
+        .select('user_identifier, recorded_at')
+        .gte('recorded_at', sevenDaysAgo)
+        .order('recorded_at', { ascending: true });
+
+      // Bucket snapshots into 30-minute intervals
+      const activityTimeline: ActivityTimelinePoint[] = [];
+      if (snapshotsData && snapshotsData.length > 0) {
+        const bucketMs = 30 * 60 * 1000;
+        const buckets = new Map<number, Set<string>>();
+        
+        snapshotsData.forEach(s => {
+          const ts = new Date(s.recorded_at).getTime();
+          const bucketKey = Math.floor(ts / bucketMs) * bucketMs;
+          if (!buckets.has(bucketKey)) buckets.set(bucketKey, new Set());
+          buckets.get(bucketKey)!.add(s.user_identifier);
+        });
+
+        Array.from(buckets.entries())
+          .sort(([a], [b]) => a - b)
+          .forEach(([ts, users]) => {
+            activityTimeline.push({
+              time: new Date(ts).toISOString(),
+              activeUsers: users.size,
+            });
+          });
+      }
+
       setData({
         likes,
         feedback,
@@ -150,7 +187,8 @@ export function useAdminAnalytics() {
         activeUsers,
         portalUsers,
         directUsers,
-        overallAvgRating
+        overallAvgRating,
+        activityTimeline
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch analytics');

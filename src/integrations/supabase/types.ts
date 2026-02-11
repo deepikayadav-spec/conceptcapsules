@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_snapshots: {
+        Row: {
+          id: string
+          recorded_at: string
+          user_identifier: string
+        }
+        Insert: {
+          id?: string
+          recorded_at?: string
+          user_identifier: string
+        }
+        Update: {
+          id?: string
+          recorded_at?: string
+          user_identifier?: string
+        }
+        Relationships: []
+      }
       user_sessions: {
         Row: {
           created_at: string
