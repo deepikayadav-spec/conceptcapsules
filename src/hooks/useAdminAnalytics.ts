@@ -119,14 +119,18 @@ export function useAdminAnalytics() {
       let portalUsers = 0;
       let directUsers = 0;
 
-      if (!sessionsError && sessionsData) {
-        totalUniqueUsers = sessionsData.length;
+      if (!sessionsError && sessionsData && sessionsData.length > 0) {
+        // Merge session users with engagement-only users
+        const sessionIdentifiers = new Set(sessionsData.map(s => s.user_identifier));
+        const engagementUsers = new Set([...uniqueUsersFromLikes, ...uniqueUsersFromFeedback]);
+        const allUsers = new Set([...sessionIdentifiers, ...engagementUsers]);
+        totalUniqueUsers = allUsers.size;
         const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
         activeUsers = sessionsData.filter(s => s.last_active_at > thirtyMinAgo).length;
         portalUsers = sessionsData.filter(s => s.source === 'portal').length;
         directUsers = sessionsData.filter(s => s.source === 'fingerprint').length;
       } else {
-        // Fallback to old method
+        // Fallback: count from engagement data
         const allUniqueUsers = new Set([...uniqueUsersFromLikes, ...uniqueUsersFromFeedback]);
         totalUniqueUsers = allUniqueUsers.size;
       }
