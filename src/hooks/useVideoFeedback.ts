@@ -49,16 +49,29 @@ export function useVideoFeedback(byteId: string) {
     setIsSubmitting(true);
 
     try {
-      const { data, error } = await supabase
-        .from('video_feedback')
-        .insert({
-          byte_id: byteId,
-          user_fingerprint: fingerprint,
-          rating,
-          comment: comment || null,
-        })
-        .select()
-        .single();
+      let data, error;
+
+      if (userFeedback) {
+        // Update existing feedback
+        ({ data, error } = await supabase
+          .from('video_feedback')
+          .update({ rating, comment: comment || null })
+          .eq('id', userFeedback.id)
+          .select()
+          .single());
+      } else {
+        // Insert new feedback
+        ({ data, error } = await supabase
+          .from('video_feedback')
+          .insert({
+            byte_id: byteId,
+            user_fingerprint: fingerprint,
+            rating,
+            comment: comment || null,
+          })
+          .select()
+          .single());
+      }
 
       if (error) throw error;
 
@@ -76,7 +89,7 @@ export function useVideoFeedback(byteId: string) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [byteId, fingerprint, isSubmitting]);
+  }, [byteId, fingerprint, isSubmitting, userFeedback]);
 
   return { userFeedback, submitFeedback, isSubmitting };
 }
