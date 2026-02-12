@@ -15,6 +15,7 @@ export function VideoActions({ byteId }: VideoActionsProps) {
   const { likesCount, isLiked, toggleLike, isLoading: likeLoading } = useVideoLikes(byteId);
   const { userFeedback, submitFeedback, isSubmitting } = useVideoFeedback(byteId);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -25,6 +26,7 @@ export function VideoActions({ byteId }: VideoActionsProps) {
     const success = await submitFeedback(rating, comment);
     if (success) {
       setFeedbackOpen(false);
+      setIsEditing(false);
       setRating(0);
       setComment('');
     }
@@ -129,7 +131,7 @@ export function VideoActions({ byteId }: VideoActionsProps) {
                 </Button>
               </div>
 
-              {userFeedback ? (
+              {userFeedback && !isEditing ? (
                 <div className="text-center py-4">
                   <div className="flex justify-center gap-1 mb-3">
                     {[1, 2, 3, 4, 5].map((star) => (
@@ -152,6 +154,18 @@ export function VideoActions({ byteId }: VideoActionsProps) {
                       "{userFeedback.comment}"
                     </p>
                   )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-3 rounded-xl"
+                    onClick={() => {
+                      setIsEditing(true);
+                      setRating(userFeedback.rating);
+                      setComment(userFeedback.comment || '');
+                    }}
+                  >
+                    Change Rating
+                  </Button>
                 </div>
               ) : (
                 <>
